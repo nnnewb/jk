@@ -13,8 +13,8 @@ import (
 
 type Generator interface {
 	Parse() error
-	GenerateService(drv string) error
-	GenerateTransport(drv string) error
+	GenerateService(drv string, output string) error
+	GenerateTransport(drv string, output string) error
 }
 
 type JKGenerator struct {
@@ -23,14 +23,12 @@ type JKGenerator struct {
 	pkgTypes *types.Package
 	svcName  string
 	svcTypes *types.Interface
-	outDir   string
 }
 
-func NewJKGenerator(serviceName, packagePath, outDir string) *JKGenerator {
+func NewJKGenerator(serviceName, packagePath string) *JKGenerator {
 	return &JKGenerator{
 		svcName: serviceName,
 		pkgPath: packagePath,
-		outDir:  outDir,
 	}
 }
 
@@ -55,13 +53,13 @@ func (j *JKGenerator) Parse() error {
 	return nil
 }
 
-func (j *JKGenerator) GenerateService(drv string) error {
+func (j *JKGenerator) GenerateService(drv string, output string) error {
 	d, ok := driver.ServiceGenDrivers[drv]
 	if !ok {
 		return fmt.Errorf("%s: driver not exists", drv)
 	}
 
-	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes, j.outDir)
+	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes, output)
 
 	err := d.GenerateService(req)
 	if err != nil {
@@ -76,13 +74,13 @@ func (j *JKGenerator) GenerateService(drv string) error {
 	return nil
 }
 
-func (j *JKGenerator) GenerateTransport(drv string) error {
+func (j *JKGenerator) GenerateTransport(drv string, output string) error {
 	d, ok := driver.TransportGenDrivers[drv]
 	if !ok {
 		return fmt.Errorf("%s: driver not exists", drv)
 	}
 
-	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes, j.outDir)
+	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes, output)
 	err := d.GenerateTransport(req)
 	if err != nil {
 		return err
