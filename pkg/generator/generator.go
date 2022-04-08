@@ -2,13 +2,9 @@ package generator
 
 import (
 	"fmt"
-	"go/ast"
 	"go/importer"
-	"go/parser"
 	"go/token"
 	"go/types"
-	"io/fs"
-	"regexp"
 
 	_ "github.com/nnnewb/jk/pkg/generator/contrib/service"
 	_ "github.com/nnnewb/jk/pkg/generator/contrib/transports/grpc"
@@ -27,12 +23,14 @@ type JKGenerator struct {
 	pkgTypes *types.Package
 	svcName  string
 	svcTypes *types.Interface
+	outDir   string
 }
 
-func NewJKGenerator(serviceName, packagePath string) *JKGenerator {
+func NewJKGenerator(serviceName, packagePath, outDir string) *JKGenerator {
 	return &JKGenerator{
 		svcName: serviceName,
 		pkgPath: packagePath,
+		outDir:  outDir,
 	}
 }
 
@@ -40,33 +38,11 @@ func (j *JKGenerator) Parse() error {
 	fst := token.NewFileSet()
 	j.fst = fst
 
-	packages, err := parser.ParseDir(fst, j.pkgPath, func(fi fs.FileInfo) bool {
-		return !regexp.MustCompile(`.*_test\.go`).MatchString(fi.Name())
-	}, parser.ParseComments)
+	pkg, err := importer.ForCompiler(fst, "source", nil).Import(j.pkgPath)
 	if err != nil {
 		return err
 	}
-	if len(packages) > 1 {
-		return fmt.Errorf("more than one package found in path %s", j.pkgPath)
-	}
-
-	var pkg *ast.Package
-	for _, p := range packages {
-		pkg = p
-		break
-	}
-
-	// type-check
-	cfg := &types.Config{Importer: importer.Default()}
-	files := []*ast.File{}
-	for _, file := range pkg.Files {
-		files = append(files, file)
-	}
-
-	j.pkgTypes, err = cfg.Check(j.pkgPath, fst, files, nil)
-	if err != nil {
-		return err
-	}
+	j.pkgTypes = pkg
 
 	// service type lookup
 	svcTypeLookupResult := j.pkgTypes.Scope().Lookup(j.svcName)
@@ -85,7 +61,7 @@ func (j *JKGenerator) GenerateService(drv string) error {
 		return fmt.Errorf("%s: driver not exists", drv)
 	}
 
-	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes)
+	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes, j.outDir)
 
 	err := d.GenerateService(req)
 	if err != nil {
@@ -106,7 +82,7 @@ func (j *JKGenerator) GenerateTransport(drv string) error {
 		return fmt.Errorf("%s: driver not exists", drv)
 	}
 
-	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes)
+	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes, j.outDir)
 	err := d.GenerateTransport(req)
 	if err != nil {
 		return err

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"os/exec"
-	"path/filepath"
 )
 
 var (
@@ -122,5 +121,5 @@ func GetGoModFolderPath() string {
 	if l.Dir == "" {
 		panic(errors.New("current working directory is not go module!"))
 	}
-	return filepath.Dir(l.Dir)
+	return l.Dir
 }

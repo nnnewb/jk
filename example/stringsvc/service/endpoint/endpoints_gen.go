@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	endpoint "github.com/go-kit/kit/endpoint"
+	service "github.com/nnnewb/jk/example/stringsvc/service"
 )
 
 type ServiceEndpoints struct {
@@ -16,7 +17,7 @@ type ServiceEndpoints struct {
 	uppercase endpoint.Endpoint
 }
 
-func (s ServiceEndpoints) Buy(ctx context.Context, good Good) (orderID string, err error) {
+func (s ServiceEndpoints) Buy(ctx context.Context, good service.Good) (orderID string, err error) {
 	request := &BuyRequest{Good: good}
 	resp, err := s.buy(ctx, request)
 	if err != nil {

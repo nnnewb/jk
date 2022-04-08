@@ -15,20 +15,22 @@ type GenerateRequest struct {
 	Svc      *types.Interface
 	SvcName  string
 	genFiles map[string]*strings.Builder
+	OutDir   string
 }
 
-func NewServiceGenerateRequest(fst *token.FileSet, pkgTypes *types.Package, svcName string, svc *types.Interface) *GenerateRequest {
+func NewServiceGenerateRequest(fst *token.FileSet, pkg *types.Package, svcName string, svc *types.Interface, outDir string) *GenerateRequest {
 	return &GenerateRequest{
 		FileSet:  fst,
-		Pkg:      pkgTypes,
+		Pkg:      pkg,
 		Svc:      svc,
 		SvcName:  svcName,
 		genFiles: map[string]*strings.Builder{},
+		OutDir:   outDir,
 	}
 }
 
 func (s *GenerateRequest) GenFile(relativePath string) *GeneratedFile {
-	realpath, err := filepath.Abs(filepath.Join(s.Pkg.Path(), relativePath))
+	realpath, err := filepath.Abs(filepath.Join(s.OutDir, relativePath))
 	if err != nil {
 		log.Fatal(err)
 	}

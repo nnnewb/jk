@@ -5,7 +5,6 @@ import (
 	"go/importer"
 	"go/types"
 	"log"
-	"strings"
 
 	"github.com/dave/jennifer/jen"
 )
@@ -260,14 +259,8 @@ func ZeroLit(tp types.Type) jen.Code {
 func TypeQual(pkg *types.Package, tp types.Type) jen.Code {
 	switch t := tp.(type) {
 	case *types.Named:
-		p := t.Obj().Pkg()
-		if p != nil && p.Path() != pkg.Path() {
-			// TODO: shit hole. need improve.
-			importPath := p.Path()
-			if strings.HasPrefix(importPath, GetGoModFolderPath()) {
-				importPath = GetGoModImportPath() + "/" + strings.ReplaceAll(importPath, GetGoModFolderPath(), "")
-			}
-			return jen.Qual(importPath, t.Obj().Name())
+		if t.Obj().Pkg() != nil {
+			return jen.Qual(t.Obj().Pkg().Path(), t.Obj().Name())
 		}
 		return jen.Id(t.Obj().Name())
 	default:

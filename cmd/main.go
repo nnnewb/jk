@@ -21,15 +21,18 @@ func main() {
 		serviceName   string
 		packagePath   string
 		transportName string
+		outDir        string
 	)
 	flag.StringVar(&packagePath, "package", "", "input go package path")
 	flag.StringVar(&serviceName, "service", "", "service interface name")
 	flag.StringVar(&transportName, "transport", "", "transport name")
+	flag.StringVar(&outDir, "outdir", "", "output folder path")
 	flag.Parse()
 	requireCliOption("package", packagePath)
 	requireCliOption("service", serviceName)
+	requireCliOption("outdir", outDir)
 
-	g := generator.NewJKGenerator(serviceName, packagePath)
+	g := generator.NewJKGenerator(serviceName, packagePath, outDir)
 	err := g.Parse()
 	if err != nil {
 		log.Fatal(err)

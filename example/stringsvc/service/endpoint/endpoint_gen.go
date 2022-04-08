@@ -5,17 +5,18 @@ package service
 import (
 	"context"
 	endpoint "github.com/go-kit/kit/endpoint"
+	service "github.com/nnnewb/jk/example/stringsvc/service"
 )
 
 type BuyRequest struct {
-	Good Good
+	Good service.Good
 }
 
 type BuyResponse struct {
 	OrderID string
 }
 
-func makeBuyEndpoint(svc Service) endpoint.Endpoint {
+func makeBuyEndpoint(svc service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		request := req.(*BuyRequest)
 		orderID, err := svc.Buy(ctx, request.Good)
@@ -35,7 +36,7 @@ type JoinResponse struct {
 	Text string
 }
 
-func makeJoinEndpoint(svc Service) endpoint.Endpoint {
+func makeJoinEndpoint(svc service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		request := req.(*JoinRequest)
 		text, err := svc.Join(ctx, request.Parts)
@@ -55,7 +56,7 @@ type Join2Response struct {
 	Text string
 }
 
-func makeJoin2Endpoint(svc Service) endpoint.Endpoint {
+func makeJoin2Endpoint(svc service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		request := req.(*Join2Request)
 		text, err := svc.Join2(ctx, request.Parts)
@@ -75,7 +76,7 @@ type Join3Response struct {
 	Text string
 }
 
-func makeJoin3Endpoint(svc Service) endpoint.Endpoint {
+func makeJoin3Endpoint(svc service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		request := req.(*Join3Request)
 		text, err := svc.Join3(ctx, request.Parts)
@@ -96,7 +97,7 @@ type LowercaseResponse struct {
 	Text string
 }
 
-func makeLowercaseEndpoint(svc Service) endpoint.Endpoint {
+func makeLowercaseEndpoint(svc service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		request := req.(*LowercaseRequest)
 		text, err := svc.Lowercase(ctx, request.Name, request.Name2)
@@ -117,7 +118,7 @@ type UppercaseResponse struct {
 	Text string
 }
 
-func makeUppercaseEndpoint(svc Service) endpoint.Endpoint {
+func makeUppercaseEndpoint(svc service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		request := req.(*UppercaseRequest)
 		text, err := svc.Uppercase(ctx, request.Name, request.Name2)
