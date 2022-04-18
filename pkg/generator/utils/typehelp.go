@@ -92,7 +92,8 @@ func IsSerializableType(tp types.Type) bool {
 		}
 		return true
 	case *types.Pointer:
-		return IsSerializableType(t.Elem())
+		// TODO: only allowed pointer to struct, need reconsider
+		return IsStruct(t.Elem())
 	case *types.Named:
 		return IsSerializableType(t.Underlying())
 	case *types.Map:

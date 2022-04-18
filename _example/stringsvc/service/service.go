@@ -13,5 +13,6 @@ type Service interface {
 	Lowercase(ctx context.Context, name string, name2 string) (text string, err error)
 	Join(ctx context.Context, parts []string) (text string, err error)
 	Join2(ctx context.Context, parts map[string]string) (text string, err error)
+	// omit invalid signature
 	Join3(ctx context.Context, parts *map[string]string) (text string, err error)
 }

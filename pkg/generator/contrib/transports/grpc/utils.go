@@ -53,7 +53,7 @@ func namedTypeToProtoMessage(tp types.Type, messages map[string]string) error {
 			sb.WriteString(" ")
 			sb.WriteString(strcase.ToSnake(field.Name()))
 			sb.WriteString(" = ")
-			sb.WriteString(strconv.FormatInt(int64(i), 10))
+			sb.WriteString(strconv.FormatInt(int64(i+1), 10))
 			sb.WriteString(";\n")
 
 			namedTypeToProtoMessage(field.Type(), messages)

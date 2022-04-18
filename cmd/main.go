@@ -18,26 +18,16 @@ func requireCliOption(name string, option interface{}) {
 
 func main() {
 	var (
-		serviceName     string
-		packagePath     string
-		transportName   string
-		serviceOutDir   string
-		transportOutDir string
+		serviceName   string
+		packagePath   string
+		transportName string
 	)
-	flag.StringVar(&packagePath, "package", "", "input go package path")
+	flag.StringVar(&packagePath, "package", "", "go package path. e.g. github.com/nnnewb/jk")
 	flag.StringVar(&serviceName, "service", "", "service interface name")
 	flag.StringVar(&transportName, "transport", "", "transport name")
-	flag.StringVar(&serviceOutDir, "service-outdir", "", "output folder path")
-	flag.StringVar(&transportOutDir, "transport-outdir", "", "transport output folder path")
 	flag.Parse()
 	requireCliOption("package", packagePath)
 	requireCliOption("service", serviceName)
-	requireCliOption("service-outdir", serviceOutDir)
-
-	if transportName != "" && transportOutDir == "" {
-		flag.Usage()
-		panic(fmt.Errorf("-transport-outdir is required when generating transport code"))
-	}
 
 	g := generator.NewJKGenerator(serviceName, packagePath)
 	err := g.Parse()
@@ -45,13 +35,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = g.GenerateService("", serviceOutDir)
+	err = g.GenerateService("")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if transportName != "" {
-		err = g.GenerateTransport(transportName, transportOutDir)
+		err = g.GenerateTransport(transportName)
 		if err != nil {
 			log.Fatal(err)
 		}

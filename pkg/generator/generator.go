@@ -5,6 +5,7 @@ import (
 	"go/importer"
 	"go/token"
 	"go/types"
+	"path/filepath"
 
 	_ "github.com/nnnewb/jk/pkg/generator/contrib/service"
 	_ "github.com/nnnewb/jk/pkg/generator/contrib/transports/grpc"
@@ -18,11 +19,12 @@ type Generator interface {
 }
 
 type JKGenerator struct {
-	fst      *token.FileSet
-	pkgPath  string
-	pkgTypes *types.Package
-	svcName  string
-	svcTypes *types.Interface
+	fst          *token.FileSet
+	pkgPath      string // package import path. e.g. github.com/nnnewb/jk
+	pkgLocalPath string // package local path. e.g. ./
+	pkgTypes     *types.Package
+	svcName      string
+	svcTypes     *types.Interface
 }
 
 func NewJKGenerator(serviceName, packagePath string) *JKGenerator {
@@ -50,16 +52,19 @@ func (j *JKGenerator) Parse() error {
 		return fmt.Errorf("%s: type not found", j.svcName)
 	}
 
+	// find local path of package
+	j.pkgLocalPath = filepath.Dir(fst.Position(svcTypeLookupResult.Pos()).Filename)
+
 	return nil
 }
 
-func (j *JKGenerator) GenerateService(drv string, output string) error {
+func (j *JKGenerator) GenerateService(drv string) error {
 	d, ok := driver.ServiceGenDrivers[drv]
 	if !ok {
 		return fmt.Errorf("%s: driver not exists", drv)
 	}
 
-	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes, output)
+	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes, j.pkgLocalPath)
 
 	err := d.GenerateService(req)
 	if err != nil {
@@ -74,13 +79,13 @@ func (j *JKGenerator) GenerateService(drv string, output string) error {
 	return nil
 }
 
-func (j *JKGenerator) GenerateTransport(drv string, output string) error {
+func (j *JKGenerator) GenerateTransport(drv string) error {
 	d, ok := driver.TransportGenDrivers[drv]
 	if !ok {
 		return fmt.Errorf("%s: driver not exists", drv)
 	}
 
-	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes, output)
+	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes, j.pkgLocalPath)
 	err := d.GenerateTransport(req)
 	if err != nil {
 		return err
