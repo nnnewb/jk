@@ -7,28 +7,23 @@ import endpoint "stringsvc/service/endpoint"
 // EncodeBuyRequest encode endpoint request struct to gRPC message struct.
 func EncodeBuyRequest(req endpoint.BuyRequest) (BuyRequest, error) {
 	ret := &BuyRequest{}
-	{
-		ret.Good.Name = req.Good.Name
-		ret.Good.Price = req.Good.Price
-	}
+	ret.Good = &Good{}
+	ret.Good.Name = req.Good.Name
+	ret.Good.Price = req.Good.Price
 	return ret, nil
 }
 
 // EncodeJoinRequest encode endpoint request struct to gRPC message struct.
 func EncodeJoinRequest(req endpoint.JoinRequest) (JoinRequest, error) {
 	ret := &JoinRequest{}
-	for _, elem := range req.Parts {
-		ret.Parts = append(ret.Parts, elem)
-	}
+	ret.Parts = req.Parts
 	return ret, nil
 }
 
 // EncodeJoin2Request encode endpoint request struct to gRPC message struct.
 func EncodeJoin2Request(req endpoint.Join2Request) (Join2Request, error) {
 	ret := &Join2Request{}
-	for k, v := range req.Parts {
-		ret.Parts[k] = v
-	}
+	ret.Parts = req.Parts
 	return ret, nil
 }
 

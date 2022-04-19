@@ -129,10 +129,10 @@ func (g GRPCTransportGenerator) generateEncoder(req *driver.GenerateRequest) err
 				for i := 1; i < methodType.Params().Len(); i++ {
 					param := methodType.Params().At(i)
 					stmt, err := utils.GenCopyVar(param, "ret", "req")
-					if err != nil {
-						// ignore
-					} else {
-						g.Add(stmt)
+					if err == nil {
+						for _, v := range stmt {
+							g.Add(v)
+						}
 					}
 				}
 
