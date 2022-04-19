@@ -10,22 +10,24 @@ import (
 )
 
 type GenerateRequest struct {
-	FileSet  *token.FileSet
-	Pkg      *types.Package
-	Svc      *types.Interface
-	SvcName  string
-	genFiles map[string]*strings.Builder
-	OutDir   string
+	FileSet       *token.FileSet
+	Pkg           *types.Package
+	Svc           *types.Named
+	SvcName       string
+	genFiles      map[string]*strings.Builder
+	OutDir        string
+	TypesImporter types.Importer
 }
 
-func NewServiceGenerateRequest(fst *token.FileSet, pkg *types.Package, svcName string, svc *types.Interface, outDir string) *GenerateRequest {
+func NewServiceGenerateRequest(fst *token.FileSet, pkg *types.Package, svcName string, svc *types.Named, outDir string, i types.Importer) *GenerateRequest {
 	return &GenerateRequest{
-		FileSet:  fst,
-		Pkg:      pkg,
-		Svc:      svc,
-		SvcName:  svcName,
-		genFiles: map[string]*strings.Builder{},
-		OutDir:   outDir,
+		FileSet:       fst,
+		Pkg:           pkg,
+		Svc:           svc,
+		SvcName:       svcName,
+		genFiles:      map[string]*strings.Builder{},
+		OutDir:        outDir,
+		TypesImporter: i,
 	}
 }
 

@@ -7,5 +7,10 @@
 			"path": "_example\\stringsvc"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"cSpell.words": [
+			"gensvc",
+			"nnnewb"
+		]
+	}
 }

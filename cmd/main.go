@@ -3,10 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
+	"go/importer"
+	"go/token"
+	"go/types"
 	"log"
+	"os"
+	"path/filepath"
 	"reflect"
 
-	"github.com/nnnewb/jk/pkg/generator"
+	"github.com/dave/jennifer/jen"
+	"github.com/nnnewb/jk/pkg/gen/genreq"
+	"github.com/nnnewb/jk/pkg/gen/gensvc"
+	"github.com/nnnewb/jk/pkg/gen/transports/genrpc"
 )
 
 func requireCliOption(name string, option interface{}) {
@@ -29,21 +37,87 @@ func main() {
 	requireCliOption("package", packagePath)
 	requireCliOption("service", serviceName)
 
-	g := generator.NewJKGenerator(serviceName, packagePath)
-	err := g.Parse()
+	fst, importer, svc, err := findService(packagePath, serviceName)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = g.GenerateService("")
+	req := &genreq.GenRequest{
+		Fst:      fst,
+		Importer: importer,
+		Svc:      svc,
+	}
+
+	if err := generateService(req); err != nil {
+		log.Fatal(err)
+	}
+
+	f := jen.NewFile("netrpc")
+	err = genrpc.GenBindings(f, req)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if transportName != "" {
-		err = g.GenerateTransport(transportName)
-		if err != nil {
-			log.Fatal(err)
+	err = f.Render(os.Stdout)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func findService(pkgPath, serviceName string) (*token.FileSet, types.Importer, *types.TypeName, error) {
+	fst := token.NewFileSet()
+
+	i := importer.ForCompiler(fst, "source", nil)
+	pkg, err := i.Import(pkgPath)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// service type lookup
+	svcTypeLookupResult := pkg.Scope().Lookup(serviceName)
+	svcTypeName, ok := svcTypeLookupResult.(*types.TypeName)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("%v: not a type name", svcTypeLookupResult)
+	}
+
+	return fst, i, svcTypeName, nil
+}
+
+func generateService(req *genreq.GenRequest) error {
+	f := jen.NewFile("endpoint")
+
+	err := gensvc.GenParamsResultsStruct(f, req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = gensvc.GenEndpointMaker(f, req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dst := filepath.Join(req.GetServiceLocalPath(), "endpoint")
+	info, err := os.Stat(dst)
+	if err != nil {
+		if os.IsNotExist(err) {
+			os.MkdirAll(dst, 0o755)
 		}
+		return err
 	}
+	if !info.IsDir() {
+		return fmt.Errorf("%s is not dir", dst)
+	}
+
+	file, err := os.OpenFile(filepath.Join(dst, "endpoint.go"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	err = f.Render(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
 }

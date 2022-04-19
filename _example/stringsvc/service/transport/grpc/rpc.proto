@@ -1,57 +1,5 @@
 // This file is generated jk, DO NOT EDIT.
 syntax = "proto3";
 option go_package="stringsvc/service/transport/grpc";
-message BuyRequest {
-    service_Good good = 1;
-}
-
-message BuyResponse {
-    string orderID = 1;
-}
-
-message JoinRequest {
-    repeated string parts = 1;
-}
-
-message JoinResponse {
-    string text = 1;
-}
-
-message Join2Request {
-    map<string,string> parts = 1;
-}
-
-message Join2Response {
-    string text = 1;
-}
-
-message LowercaseRequest {
-    string name = 1;
-    string name2 = 2;
-}
-
-message LowercaseResponse {
-    string text = 1;
-}
-
-message UppercaseRequest {
-    string name = 1;
-    string name2 = 2;
-}
-
-message UppercaseResponse {
-    string text = 1;
-}
-
-message service_Good {
-    string name = 1;
-    string price = 2;
-}
-
 service Service {
-    rpc Buy(BuyRequest) returns (BuyResponse);
-    rpc Join(JoinRequest) returns (JoinResponse);
-    rpc Join2(Join2Request) returns (Join2Response);
-    rpc Lowercase(LowercaseRequest) returns (LowercaseResponse);
-    rpc Uppercase(UppercaseRequest) returns (UppercaseResponse);
 }

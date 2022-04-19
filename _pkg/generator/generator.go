@@ -19,12 +19,13 @@ type Generator interface {
 }
 
 type JKGenerator struct {
-	fst          *token.FileSet
-	pkgPath      string // package import path. e.g. github.com/nnnewb/jk
-	pkgLocalPath string // package local path. e.g. ./
-	pkgTypes     *types.Package
-	svcName      string
-	svcTypes     *types.Interface
+	fst           *token.FileSet
+	pkgPath       string // package import path. e.g. github.com/nnnewb/jk
+	pkgLocalPath  string // package local path. e.g. ./
+	pkgTypes      *types.Package
+	svcName       string
+	svcType       *types.Named
+	typesImporter types.Importer
 }
 
 func NewJKGenerator(serviceName, packagePath string) *JKGenerator {
@@ -46,11 +47,18 @@ func (j *JKGenerator) Parse() error {
 
 	// service type lookup
 	svcTypeLookupResult := j.pkgTypes.Scope().Lookup(j.svcName)
-	if types.IsInterface(svcTypeLookupResult.Type()) {
-		j.svcTypes = svcTypeLookupResult.(*types.TypeName).Type().(*types.Named).Underlying().(*types.Interface)
-	} else {
-		return fmt.Errorf("%s: type not found", j.svcName)
+	svcTypeName, ok := svcTypeLookupResult.(*types.TypeName)
+	if !ok {
+		return fmt.Errorf("%v: not a type name", svcTypeLookupResult)
 	}
+
+	svcNamedType, ok := svcTypeName.Type().(*types.Named)
+	if !ok {
+		return fmt.Errorf("%v: not a named type", svcTypeName)
+	}
+
+	// svc type
+	j.svcType = svcNamedType
 
 	// find local path of package
 	j.pkgLocalPath = filepath.Dir(fst.Position(svcTypeLookupResult.Pos()).Filename)
@@ -64,7 +72,7 @@ func (j *JKGenerator) GenerateService(drv string) error {
 		return fmt.Errorf("%s: driver not exists", drv)
 	}
 
-	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes, j.pkgLocalPath)
+	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcType, j.pkgLocalPath, j.typesImporter)
 
 	err := d.GenerateService(req)
 	if err != nil {
@@ -85,7 +93,7 @@ func (j *JKGenerator) GenerateTransport(drv string) error {
 		return fmt.Errorf("%s: driver not exists", drv)
 	}
 
-	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcTypes, j.pkgLocalPath)
+	req := driver.NewServiceGenerateRequest(j.fst, j.pkgTypes, j.svcName, j.svcType, j.pkgLocalPath, j.typesImporter)
 	err := d.GenerateTransport(req)
 	if err != nil {
 		return err

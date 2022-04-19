@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"go/importer"
+	"go/token"
 	"go/types"
 	"log"
 
@@ -257,7 +258,7 @@ func ZeroLit(tp types.Type) jen.Code {
 }
 
 // TypeQual if given type is types.Named and not builtin type, return a jen.Qual for it.
-func TypeQual(pkg *types.Package, tp types.Type) jen.Code {
+func TypeQual(tp types.Type) jen.Code {
 	switch t := tp.(type) {
 	case *types.Named:
 		if t.Obj().Pkg() != nil {
@@ -332,4 +333,62 @@ func CheckMethodSignature(method *types.Func) bool {
 	}
 
 	return true
+}
+
+func FilterCorrespondPublicMethod(typ *types.Named) []*types.Func {
+	svc := typ.Underlying().(*types.Interface)
+	ret := make([]*types.Func, 0, svc.NumMethods())
+	for i := 0; i < svc.NumMethods(); i++ {
+		method := svc.Method(i)
+
+		if !method.Exported() {
+			continue
+		}
+
+		// preflight check, see comments of utils.CheckMethodSignature for more detail
+		if !CheckMethodSignature(method) {
+			continue
+		}
+
+		ret = append(ret, method)
+	}
+
+	return ret
+}
+
+func NewParamsStruct(f *types.Func, ctxType, errType types.Type) *types.Struct {
+	s := f.Type().(*types.Signature)
+	fields := make([]*types.Var, 0, s.Params().Len())
+	for i := 0; i < s.Params().Len(); i++ {
+		if types.Identical(s.Params().At(i).Type(), ctxType) || types.Identical(s.Params().At(i).Type(), errType) {
+			continue
+		}
+		fields = append(fields, types.NewVar(token.NoPos, s.Params().At(i).Pkg(), s.Params().At(i).Name(), s.Params().At(i).Type()))
+	}
+	return types.NewStruct(fields, nil)
+}
+
+func NewResultsStruct(f *types.Func, ctxType, errType types.Type) *types.Struct {
+	s := f.Type().(*types.Signature)
+	fields := make([]*types.Var, 0, s.Results().Len())
+	for i := 0; i < s.Results().Len(); i++ {
+		if types.Identical(s.Results().At(i).Type(), ctxType) || types.Identical(s.Results().At(i).Type(), errType) {
+			continue
+		}
+		fields = append(fields, types.NewVar(token.NoPos, s.Results().At(i).Pkg(), s.Results().At(i).Name(), s.Results().At(i).Type()))
+	}
+	return types.NewStruct(fields, nil)
+}
+
+func GenStruct(name string, pkg *types.Package, typ *types.Struct) jen.Code {
+	return jen.Type().Id(name).StructFunc(func(g *jen.Group) {
+		for i := 0; i < typ.NumFields(); i++ {
+			field := typ.Field(i)
+			if !field.Exported() {
+				continue
+			}
+
+			g.Id(field.Name()).Add(TypeQual(pkg, field.Type()))
+		}
+	})
 }
