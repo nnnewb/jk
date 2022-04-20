@@ -1,4 +1,4 @@
-package genreq
+package gencore
 
 import (
 	"go/token"

@@ -6,11 +6,15 @@ import (
 
 	"github.com/dave/jennifer/jen"
 	"github.com/iancoleman/strcase"
-	"github.com/nnnewb/jk/pkg/gen/genreq"
+	"github.com/nnnewb/jk/pkg/gen/gencore"
 	"github.com/nnnewb/jk/pkg/gen/genutils"
 )
 
-func GenEndpointMaker(f *jen.File, req *genreq.GenRequest) error {
+func genEndpointMaker(data *gencore.PluginData) error {
+	gf := data.GetOrCreateFile("endpoint/endpoint_gen.go")
+	req := data.Request
+	f := jen.NewFile("endpoint")
+
 	for i := 0; i < req.GetServiceInterface().NumMethods(); i++ {
 		method := req.GetServiceInterface().Method(i)
 		if genutils.IsOmitMethod(method, req.GetContextType(), req.GetErrorType()) {
@@ -65,5 +69,6 @@ func GenEndpointMaker(f *jen.File, req *genreq.GenRequest) error {
 			}))).
 			Line()
 	}
-	return nil
+
+	return f.Render(gf)
 }

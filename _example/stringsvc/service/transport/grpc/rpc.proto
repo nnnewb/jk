@@ -1,5 +1,0 @@
-// This file is generated jk, DO NOT EDIT.
-syntax = "proto3";
-option go_package="stringsvc/service/transport/grpc";
-service Service {
-}

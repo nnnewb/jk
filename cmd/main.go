@@ -7,12 +7,9 @@ import (
 	"go/token"
 	"go/types"
 	"log"
-	"os"
-	"path/filepath"
 	"reflect"
 
-	"github.com/dave/jennifer/jen"
-	"github.com/nnnewb/jk/pkg/gen/genreq"
+	"github.com/nnnewb/jk/pkg/gen/gencore"
 	"github.com/nnnewb/jk/pkg/gen/gensvc"
 	"github.com/nnnewb/jk/pkg/gen/transports/genrpc"
 )
@@ -42,24 +39,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	req := &genreq.GenRequest{
+	req := &gencore.GenRequest{
 		Fst:      fst,
 		Importer: importer,
 		Svc:      svc,
 	}
 
-	if err := generateService(req); err != nil {
+	data := gencore.NewPluginData(req)
+
+	if err := gensvc.GenerateEndpoint(data); err != nil {
 		log.Fatal(err)
 	}
 
-	f := jen.NewFile("netrpc")
-	err = genrpc.GenBindings(f, req)
-	if err != nil {
+	if err := genrpc.GenerateBindings(data); err != nil {
 		log.Fatal(err)
 	}
 
-	err = f.Render(os.Stdout)
-	if err != nil {
+	if err := data.WriteToDisk(); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -81,43 +77,4 @@ func findService(pkgPath, serviceName string) (*token.FileSet, types.Importer, *
 	}
 
 	return fst, i, svcTypeName, nil
-}
-
-func generateService(req *genreq.GenRequest) error {
-	f := jen.NewFile("endpoint")
-
-	err := gensvc.GenParamsResultsStruct(f, req)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = gensvc.GenEndpointMaker(f, req)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	dst := filepath.Join(req.GetServiceLocalPath(), "endpoint")
-	info, err := os.Stat(dst)
-	if err != nil {
-		if os.IsNotExist(err) {
-			os.MkdirAll(dst, 0o755)
-		}
-		return err
-	}
-	if !info.IsDir() {
-		return fmt.Errorf("%s is not dir", dst)
-	}
-
-	file, err := os.OpenFile(filepath.Join(dst, "endpoint.go"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	err = f.Render(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return nil
 }

@@ -7,12 +7,16 @@ import (
 
 	"github.com/dave/jennifer/jen"
 	"github.com/iancoleman/strcase"
-	"github.com/nnnewb/jk/pkg/gen/genreq"
+	"github.com/nnnewb/jk/pkg/gen/gencore"
 	"github.com/nnnewb/jk/pkg/gen/genutils"
 	"github.com/nnnewb/jk/pkg/typecheck"
 )
 
-func GenParamsResultsStruct(f *jen.File, req *genreq.GenRequest) error {
+func genParamsResultsStruct(data *gencore.PluginData) error {
+	req := data.Request
+	gf := data.GetOrCreateFile("endpoint/models_gen.go")
+	f := jen.NewFile("endpoint")
+
 outer:
 	for i := 0; i < req.GetServiceInterface().NumMethods(); i++ {
 		method := req.GetServiceInterface().Method(i)
@@ -56,5 +60,5 @@ outer:
 		f.Type().Id(fmt.Sprintf("%sResponse", method.Name())).Struct(fields...).Line()
 	}
 
-	return nil
+	return f.Render(gf)
 }
