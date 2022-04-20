@@ -7,34 +7,54 @@ import (
 	"go/token"
 	"go/types"
 	"log"
-	"reflect"
 
 	"github.com/nnnewb/jk/pkg/gen/gencore"
-	"github.com/nnnewb/jk/pkg/gen/gensvc"
-	"github.com/nnnewb/jk/pkg/gen/transports/genrpc"
+	_ "github.com/nnnewb/jk/pkg/gen/plugins"
 )
 
-func requireCliOption(name string, option interface{}) {
-	if reflect.ValueOf(option).IsZero() {
-		flag.Usage()
-		panic(fmt.Errorf("option %s must be set", name))
-	}
+type StringSliceFlag struct {
+	flags []string
+}
+
+func (s *StringSliceFlag) String() string {
+	return ""
+}
+
+func (s *StringSliceFlag) Set(v string) error {
+	s.flags = append(s.flags, v)
+	return nil
+}
+
+var (
+	pkgPath, svcName string
+	genTargets       StringSliceFlag
+)
+
+func init() {
+	flag.Var(&genTargets, "gen", "generate target.")
+	flag.StringVar(&pkgPath, "package", "", "go package path. e.g. github.com/nnnewb/jk")
+	flag.StringVar(&svcName, "service", "", "service interface name")
 }
 
 func main() {
-	var (
-		serviceName   string
-		packagePath   string
-		transportName string
-	)
-	flag.StringVar(&packagePath, "package", "", "go package path. e.g. github.com/nnnewb/jk")
-	flag.StringVar(&serviceName, "service", "", "service interface name")
-	flag.StringVar(&transportName, "transport", "", "transport name")
 	flag.Parse()
-	requireCliOption("package", packagePath)
-	requireCliOption("service", serviceName)
 
-	fst, importer, svc, err := findService(packagePath, serviceName)
+	if pkgPath == "" {
+		flag.Usage()
+		log.Fatal("-package must be set")
+	}
+
+	if svcName == "" {
+		flag.Usage()
+		log.Fatal("-service must be set")
+	}
+
+	if len(genTargets.flags) == 0 {
+		flag.Usage()
+		log.Fatal("-gen must be set")
+	}
+
+	fst, importer, svc, err := findService(pkgPath, svcName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,12 +67,15 @@ func main() {
 
 	data := gencore.NewPluginData(req)
 
-	if err := gensvc.GenerateEndpoint(data); err != nil {
-		log.Fatal(err)
-	}
+	for _, name := range genTargets.flags {
+		plugin := gencore.GetPlugin(name)
+		if plugin == nil {
+			log.Fatalf("%s: no such plugin", name)
+		}
 
-	if err := genrpc.GenerateBindings(data); err != nil {
-		log.Fatal(err)
+		if err = plugin.Generate(data); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if err := data.WriteToDisk(); err != nil {

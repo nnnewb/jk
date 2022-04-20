@@ -30,8 +30,7 @@ func (f *File) WriteToDisk() error {
 		} else {
 			return err
 		}
-	}
-	if !info.IsDir() {
+	} else if !info.IsDir() {
 		return fmt.Errorf("%s is not dir", dst)
 	}
 
