@@ -1,8 +1,18 @@
 # JK
 
-> JK stand for Just-Kit.
+go-kit boilerplate code generator.
 
-A scaffolding app for generate go-kit boilerplate code.
+## Design Pattern
+
+![img.png](_doc/architecture-draw.png)
+
+### seperated transportation layer
+
+achieve transportation protocol independent. change transportation layer protocol as your wish.
+
+### unified service interface both server side and client side
+
+call all different rpc service in same way.
 
 ## usage
 
