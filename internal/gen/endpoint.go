@@ -3,94 +3,12 @@ package gen
 import (
 	"fmt"
 	"github.com/dave/jennifer/jen"
+	"github.com/pkg/errors"
 	"go/types"
 	"strings"
 )
 
-// checkParams checks if the function signature meets the following requirements:
-//   - The first parameter must be context.Context.
-//   - The second parameter must be an exported struct.
-func checkParams(params *types.Tuple) error {
-	// Check first parameter.
-	if named, ok := params.At(0).Type().(*types.Named); ok {
-		if named.Obj().Pkg().Path() != "context" || named.Obj().Name() != "Context" {
-			return fmt.Errorf("first parameter must be context.Context")
-		}
-	} else {
-		return fmt.Errorf("first parameter must be context.Context")
-	}
-
-	// Check second parameter.
-	if named, ok := params.At(1).Type().(*types.Named); ok {
-		if named.Obj().Exported() == false {
-			return fmt.Errorf("second parameter must be an exported struct")
-		}
-
-		if !IsSerializable(named.Underlying()) {
-			return fmt.Errorf("second parameter must be serializable")
-		}
-	} else {
-		return fmt.Errorf("second parameter must be an exported struct")
-	}
-
-	return nil
-}
-
-// checkResults checks if the function signature meets the following requirements:
-//   - The first return value must be an exported struct or slice of structs.
-//   - The first return value must be serializable.
-//   - The second return value must be of type error.
-func checkResults(results *types.Tuple) error {
-	// Check first return value.
-	if results.Len() < 1 {
-		return fmt.Errorf("function must have at least one return value")
-	}
-
-	// Check if the first return value is an exported struct or slice of structs
-	if named, ok := results.At(0).Type().(*types.Named); ok {
-		if named.Obj().Exported() == false {
-			return fmt.Errorf("first return value must be an exported struct or slice of structs")
-		}
-
-		// Check if the first return value is serializable
-		if !IsSerializable(named.Underlying()) {
-			return fmt.Errorf("first return value must be serializable")
-		}
-	} else if slice, ok := results.At(0).Type().(*types.Slice); ok {
-		if named, ok := slice.Elem().(*types.Named); ok {
-			if named.Obj().Exported() == false {
-				return fmt.Errorf("first return value must be an exported struct or slice of structs")
-			}
-
-			// Check if the first return value is serializable
-			if !IsSerializable(named.Underlying()) {
-				return fmt.Errorf("first return value must be serializable")
-			}
-		} else {
-			return fmt.Errorf("first return value must be an exported struct or slice of structs")
-		}
-	} else {
-		return fmt.Errorf("first return value must be an exported struct or slice of structs")
-	}
-
-	// Check second return value.
-	if results.Len() < 2 {
-		return fmt.Errorf("function must have at least two return values")
-	}
-
-	// Check if the second return value is of type error
-	if named, ok := results.At(1).Type().(*types.Named); ok {
-		if !types.Identical(types.Universe.Lookup("error").Type(), named) {
-			return fmt.Errorf("second return value must be of type error")
-		}
-	} else {
-		return fmt.Errorf("second return value must be of type error")
-	}
-
-	return nil
-}
-
-// GenerateEndpointFactory generates Endpoint factory function code from function signature.
+// generateEndpointFactory generates Endpoint factory function code from function signature.
 // The function signature must meet the following requirements:
 //   - The first parameter must be context.Context.
 //   - The second parameter must be an exported struct that is serializable.
@@ -99,7 +17,7 @@ func checkResults(results *types.Tuple) error {
 //     When returning a single struct, the response content will be encapsulated in the Data field.
 //   - The second return value must be of type error. The result of the Error method of this interface
 //     will be used as the response msg.
-func GenerateEndpointFactory(file *jen.File, svc *types.Named, f *types.Func) error {
+func generateEndpointFactory(file *jen.File, svc *types.Named, f *types.Func) error {
 	signature := f.Type().(*types.Signature)
 	params := signature.Params()
 	if params.Len() != 2 {
@@ -137,7 +55,7 @@ func GenerateEndpointFactory(file *jen.File, svc *types.Named, f *types.Func) er
 	return nil
 }
 
-func GenerateEndpointSet(file *jen.File, svc *types.Named) error {
+func generateEndpointSet(file *jen.File, svc *types.Named) error {
 	var (
 		iface *types.Interface
 		ok    bool
@@ -203,6 +121,40 @@ func GenerateEndpointSet(file *jen.File, svc *types.Named) error {
 				})
 				g.Return(jen.Id("resp").Assert(generateTypeCode(results.At(0).Type())), jen.Id("err"))
 			}).Line().Line()
+	}
+	return nil
+}
+
+// GenerateEndpoints generates endpoint factory for a given service
+func GenerateEndpoints(f *jen.File, svc *types.Named) error {
+	var (
+		iface *types.Interface
+		ok    bool
+	)
+
+	// Get the underlying interface of the named type
+	underlying := svc.Underlying()
+
+	// Check if the underlying type is an interface
+	if iface, ok = underlying.(*types.Interface); !ok {
+		// If the underlying type is not an interface, return an error
+		return fmt.Errorf("%s is not an interface", svc.Obj().Name())
+	}
+
+	// Iterate over all the methods of the interface
+	for i := 0; i < iface.NumMethods(); i++ {
+		method := iface.Method(i)
+		// Check if the method is exported
+		if method.Exported() {
+			err := generateEndpointFactory(f, svc, method)
+			if err != nil {
+				return errors.Wrapf(err, "generate endpoint factory func %s failed, error %+v", method, err)
+			}
+		}
+	}
+	err := generateEndpointSet(f, svc)
+	if err != nil {
+		return err
 	}
 	return nil
 }
