@@ -57,7 +57,7 @@ type Join3Response struct {
 	Text string
 }
 
-//go:generate jk generate endpoint -t Service
+//go:generate jk generate all -t Service
 type Service interface {
 	Buy(ctx context.Context, req BuyRequest) (res BuyResponse, err error)
 	Uppercase(ctx context.Context, req UppercaseRequest) (res UppercaseResponse, err error)
