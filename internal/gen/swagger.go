@@ -84,18 +84,11 @@ func generatePaths(svc *types.Named) *spec.Paths {
 func generateParameters(fun *types.Func) []spec.Parameter {
 	signature := fun.Type().(*types.Signature)
 	reqType := signature.Params().At(1)
-	schema := generateSchemaFromType(reqType.Type())
-
-	ret := make([]spec.Parameter, 0, len(schema.Properties))
-	for k, v := range schema.Properties {
-		v := v
-		param := spec.Parameter{}
-		param.Name = k
-		param.Schema = &v
-		param.In = "body"
-		ret = append(ret, param)
-	}
-	return ret
+	param := spec.Parameter{}
+	param.Name = "payload"
+	param.Schema = generateSchemaFromType(reqType.Type())
+	param.In = "body"
+	return []spec.Parameter{param}
 }
 
 func generateResponse(fun *types.Func) *spec.Response {

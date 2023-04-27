@@ -21,7 +21,7 @@ func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
 			Func().
 			Params(jen.Qual("context", "Context"), jen.Id("REQ")).
 			Params(jen.Id("RESP"), jen.Error())).
-		Params(jen.Qual("net/http", "HandlerFunc")).
+		Qual("net/http", "HandlerFunc").
 		BlockFunc(func(g *jen.Group) {
 			// return func(wr http.ResponseWriter, request *http.Request) {
 			g.Return(
@@ -171,10 +171,33 @@ func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
 			})))
 		}).Line()
 
+	// //go:embed swagger.json
+	f.Commentf("//go:embed swagger.json")
+	// var swagger embed.FS
+	f.Var().Id("swagger").Qual("embed", "FS")
+
 	f.Func().Id("Register").
-		Params(jen.Id("svc").Qual(pkgPath, svcName), jen.Id("m").Op("*").Qual("net/http", "ServeMux")).
-		Params(jen.Op("*").Qual("net/http", "ServeMux")).
+		Params(jen.Id("svc").Qual(pkgPath, svcName), jen.Id("m").Op("*").Qual("github.com/julienschmidt/httprouter", "Router")).
 		BlockFunc(func(g *jen.Group) {
+			// m.Handle("/swagger/service/spec/", http.FileServer(http.FS(swagger)))
+			g.Id("m").Dot("Handler").Call(
+				jen.Qual("net/http", "MethodGet"),
+				jen.Lit(fmt.Sprintf("/swagger/%s/spec/*rest", strcase.ToKebab(svcName))),
+
+				jen.Qual("net/http", "StripPrefix").Call(
+					jen.Lit(fmt.Sprintf("/swagger/%s/spec/", strcase.ToKebab(svcName))),
+					jen.Qual("net/http", "FileServer").
+						Call(jen.Qual("net/http", "FS").Call(jen.Id("swagger")))),
+			)
+			// m.Handle("/swagger/service/swagger-ui/*", httpSwagger.Handler(httpSwagger.URL("/swagger/service/swagger.json")))
+			g.Id("m").Dot("Handler").Call(
+				jen.Qual("net/http", "MethodGet"),
+				jen.Lit(fmt.Sprintf("/swagger/%s/swagger-ui/*rest", strcase.ToKebab(svcName))),
+
+				jen.Qual("github.com/swaggo/http-swagger/v2", "Handler").
+					Call(jen.Qual("github.com/swaggo/http-swagger/v2", "URL").
+						Call(jen.Lit(fmt.Sprintf("/swagger/%s/spec/swagger.json", strcase.ToKebab(svcName))))),
+			)
 
 			// TODO: 需要支持可选的 API 路径配置
 			for i := 0; i < iface.NumMethods(); i++ {
@@ -182,12 +205,13 @@ func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
 
 				apiEndpointName := strcase.ToKebab(method.Name())
 				apiServiceName := strcase.ToKebab(svcName)
-				g.Id("m").Dot("HandleFunc").Call(
+				g.Id("m").Dot("Handler").Call(
+					jen.Qual("net/http", "MethodPost"),
 					jen.Lit(fmt.Sprintf("/api/v1/%s/%s", apiServiceName, apiEndpointName)),
+
 					jen.Id("makeHandlerFunc").Call(jen.Id("svc").Dot(method.Name())),
 				)
 			}
-			g.Return(jen.Id("m"))
 		}).Line()
 	return nil
 }

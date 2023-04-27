@@ -6,6 +6,12 @@ import (
 	"go/types"
 )
 
+func InitializeFileCommon(f *jen.File) {
+	f.ImportAlias("github.com/swaggo/http-swagger/v2", "httpSwagger")
+	f.ImportName("github.com/juju/errors", "errors")
+	f.ImportName("github.com/go-kit/kit/endpoint", "endpoint")
+}
+
 // checkParams checks if the function signature meets the following requirements:
 //   - The first parameter must be context.Context.
 //   - The second parameter must be an exported struct.

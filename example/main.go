@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/julienschmidt/httprouter"
 	stringsvc1 "github.com/nnnewb/jk/example/internal/stringsvc"
 	"github.com/nnnewb/jk/example/pkg/stringsvc"
 	"log"
@@ -9,7 +10,8 @@ import (
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	stringsvc.Register(stringsvc1.Svc{}, http.DefaultServeMux)
+	router := httprouter.New()
+	stringsvc.Register(stringsvc1.Svc{}, router)
 	log.Println("Server now listening at https://127.0.0.1:8888/")
 	// generate self-signed certificate with openssl cli
 	//
@@ -22,7 +24,7 @@ func main() {
 	//     -days 3650 \
 	//     -nodes \
 	//     -subj "/C=XX/ST=StateName/L=CityName/O=CompanyName/OU=CompanySectionName/CN=CommonNameOrHostname"
-	err := http.ListenAndServeTLS("127.0.0.1:8888", "cert.pem", "key.pem", http.DefaultServeMux)
+	err := http.ListenAndServeTLS("127.0.0.1:8888", "cert.pem", "key.pem", router)
 	if err != nil {
 		log.Fatalf("Serve failed, error %+v", err)
 	}

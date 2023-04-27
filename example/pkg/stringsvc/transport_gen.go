@@ -5,9 +5,12 @@ package stringsvc
 import (
 	"bytes"
 	"context"
+	"embed"
 	"encoding/json"
-	endpoint "github.com/go-kit/kit/endpoint"
-	errors "github.com/juju/errors"
+	"github.com/go-kit/kit/endpoint"
+	"github.com/juju/errors"
+	httprouter "github.com/julienschmidt/httprouter"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"net/http"
 	"net/url"
 )
@@ -102,12 +105,16 @@ func NewClient(host string, client *http.Client) Service {
 	}
 }
 
-func Register(svc Service, m *http.ServeMux) *http.ServeMux {
-	m.HandleFunc("/api/v1/service/buy", makeHandlerFunc(svc.Buy))
-	m.HandleFunc("/api/v1/service/join", makeHandlerFunc(svc.Join))
-	m.HandleFunc("/api/v1/service/join-2", makeHandlerFunc(svc.Join2))
-	m.HandleFunc("/api/v1/service/join-3", makeHandlerFunc(svc.Join3))
-	m.HandleFunc("/api/v1/service/lowercase", makeHandlerFunc(svc.Lowercase))
-	m.HandleFunc("/api/v1/service/uppercase", makeHandlerFunc(svc.Uppercase))
-	return m
+//go:embed swagger.json
+var swagger embed.FS
+
+func Register(svc Service, m *httprouter.Router) {
+	m.Handler(http.MethodGet, "/swagger/service/spec/*rest", http.StripPrefix("/swagger/service/spec/", http.FileServer(http.FS(swagger))))
+	m.Handler(http.MethodGet, "/swagger/service/swagger-ui/*rest", httpSwagger.Handler(httpSwagger.URL("/swagger/service/spec/swagger.json")))
+	m.Handler(http.MethodPost, "/api/v1/service/buy", makeHandlerFunc(svc.Buy))
+	m.Handler(http.MethodPost, "/api/v1/service/join", makeHandlerFunc(svc.Join))
+	m.Handler(http.MethodPost, "/api/v1/service/join-2", makeHandlerFunc(svc.Join2))
+	m.Handler(http.MethodPost, "/api/v1/service/join-3", makeHandlerFunc(svc.Join3))
+	m.Handler(http.MethodPost, "/api/v1/service/lowercase", makeHandlerFunc(svc.Lowercase))
+	m.Handler(http.MethodPost, "/api/v1/service/uppercase", makeHandlerFunc(svc.Uppercase))
 }

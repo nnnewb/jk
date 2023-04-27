@@ -4,7 +4,7 @@ package stringsvc
 
 import (
 	"context"
-	endpoint "github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/endpoint"
 )
 
 // MakeBuyEndpoint create endpoint.Endpoint for function github.com/nnnewb/jk/example/pkg/stringsvc.Buy

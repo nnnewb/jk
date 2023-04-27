@@ -31,15 +31,19 @@
         "operationId": "buy",
         "parameters": [
           {
-            "name": "good",
+            "name": "payload",
             "in": "body",
             "schema": {
               "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "price": {
-                  "type": "string"
+                "good": {
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "price": {
+                      "type": "string"
+                    }
+                  }
                 }
               }
             }
@@ -73,12 +77,16 @@
         "operationId": "join",
         "parameters": [
           {
-            "name": "parts",
+            "name": "payload",
             "in": "body",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
+              "properties": {
+                "parts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
@@ -111,12 +119,16 @@
         "operationId": "join-2",
         "parameters": [
           {
-            "name": "parts",
+            "name": "payload",
             "in": "body",
             "schema": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
+              "properties": {
+                "parts": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
@@ -149,12 +161,16 @@
         "operationId": "join-3",
         "parameters": [
           {
-            "name": "parts",
+            "name": "payload",
             "in": "body",
             "schema": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
+              "properties": {
+                "parts": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
@@ -187,17 +203,17 @@
         "operationId": "lowercase",
         "parameters": [
           {
-            "name": "name",
+            "name": "payload",
             "in": "body",
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "name_2",
-            "in": "body",
-            "schema": {
-              "type": "string"
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "name_2": {
+                  "type": "string"
+                }
+              }
             }
           }
         ],
@@ -229,17 +245,17 @@
         "operationId": "uppercase",
         "parameters": [
           {
-            "name": "name",
+            "name": "payload",
             "in": "body",
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "name_2",
-            "in": "body",
-            "schema": {
-              "type": "string"
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "name_2": {
+                  "type": "string"
+                }
+              }
             }
           }
         ],
