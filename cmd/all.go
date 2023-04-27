@@ -89,6 +89,16 @@ var allCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("render generated transport layer code failed, error %+v", err)
 		}
+
+		file, err := os.OpenFile("swagger.json", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+		if err != nil {
+			log.Fatalf("open file failed, error %+v", err)
+		}
+
+		err = gen.GenerateSwagger(file, result.Type().(*types.Named), "v1", "0.1.0")
+		if err != nil {
+			log.Fatalf("generate swagger failed, error %+v", err)
+		}
 	},
 }
 

@@ -3,7 +3,7 @@ package gen
 import (
 	"fmt"
 	"github.com/dave/jennifer/jen"
-	"github.com/pkg/errors"
+	"github.com/juju/errors"
 	"go/types"
 	"strings"
 )
@@ -148,7 +148,7 @@ func GenerateEndpoints(f *jen.File, svc *types.Named) error {
 		if method.Exported() {
 			err := generateEndpointFactory(f, svc, method)
 			if err != nil {
-				return errors.Wrapf(err, "generate endpoint factory func %s failed, error %+v", method, err)
+				return errors.Annotatef(err, "generate endpoint factory func %s failed, error %+v", method, err)
 			}
 		}
 	}
