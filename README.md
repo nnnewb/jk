@@ -17,5 +17,5 @@ call all different rpc service in same way.
 ## usage
 
 ```bash
-go run cmd/main.go -package github.com/nnnewb/jk/example/stringsvc/service -service Service -outdir ./example/stringsvc/service/
+go run cmd/main.go -package github.com/nnnewb/jk/_example/stringsvc/service -service Service -outdir ./_example/stringsvc/service/
 ```
