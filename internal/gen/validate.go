@@ -15,6 +15,8 @@ func IsSerializable(t types.Type) bool {
 		return isSerializableMapType(t)
 	case *types.Struct:
 		return isSerializableStructureType(t)
+	case *types.Named:
+		return IsSerializable(t.Underlying())
 	default:
 		return false
 	}
@@ -24,30 +26,7 @@ func isSerializableStructureType(t types.Type) bool {
 	if s, ok := t.(*types.Struct); ok {
 		for i := 0; i < s.NumFields(); i++ {
 			field := s.Field(i)
-			switch ft := field.Type().(type) {
-			case *types.Named:
-				return IsSerializable(ft.Underlying())
-			case *types.Basic:
-				if !isBasicSerializableType(ft) {
-					return false
-				}
-			case *types.Struct:
-				if !isSerializableStructureType(ft) {
-					return false
-				}
-			case *types.Pointer:
-				if !isSerializablePointerType(ft) {
-					return false
-				}
-			case *types.Map:
-				if !isSerializableMapType(ft) {
-					return false
-				}
-			case *types.Slice:
-				if !isSerializableSliceType(ft) {
-					return false
-				}
-			default:
+			if !IsSerializable(field.Type()) {
 				return false
 			}
 		}
@@ -58,17 +37,11 @@ func isSerializableStructureType(t types.Type) bool {
 
 func isSerializablePointerType(t types.Type) bool {
 	if p, ok := t.(*types.Pointer); ok {
-		switch vt := p.Elem().(type) {
-		case *types.Basic:
-			return isBasicSerializableType(vt)
-		case *types.Map:
-			return isSerializableMapType(vt)
-		case *types.Slice:
-			return isSerializableSliceType(vt)
-		case *types.Struct:
-			return isSerializableStructureType(vt)
-		default:
+		switch p.Elem().(type) {
+		case *types.Pointer:
 			return false
+		default:
+			return IsSerializable(p.Elem())
 		}
 	}
 	return false
@@ -76,20 +49,7 @@ func isSerializablePointerType(t types.Type) bool {
 
 func isSerializableSliceType(t types.Type) bool {
 	if s, ok := t.(*types.Slice); ok {
-		switch et := s.Elem().(type) {
-		case *types.Basic:
-			return isBasicSerializableType(et)
-		case *types.Map:
-			return isSerializableMapType(et)
-		case *types.Slice:
-			return isSerializableSliceType(et)
-		case *types.Struct:
-			return isSerializableStructureType(et)
-		case *types.Pointer:
-			return isSerializablePointerType(et)
-		default:
-			return false
-		}
+		return IsSerializable(s.Elem())
 	}
 	return false
 }
@@ -100,20 +60,7 @@ func isSerializableMapType(t types.Type) bool {
 			return false
 		}
 
-		switch vt := m.Elem().(type) {
-		case *types.Basic:
-			return isBasicSerializableType(vt)
-		case *types.Map:
-			return isSerializableMapType(vt)
-		case *types.Slice:
-			return isSerializableSliceType(vt)
-		case *types.Struct:
-			return isSerializableStructureType(vt)
-		case *types.Pointer:
-			return isSerializablePointerType(vt)
-		default:
-			return false
-		}
+		return IsSerializable(m.Elem())
 	}
 	return false
 }
