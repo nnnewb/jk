@@ -68,7 +68,7 @@ func isSerializableMapType(t types.Type) bool {
 func isBasicSerializableType(t types.Type) bool {
 	if b, ok := t.(*types.Basic); ok {
 		switch b.Kind() {
-		case types.Int,
+		case types.Int, types.Uint,
 			types.Int8, types.Int16, types.Int32, types.Int64,
 			types.Uint8, types.Uint16, types.Uint32, types.Uint64,
 			types.Float32, types.Float64,
