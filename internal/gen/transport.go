@@ -141,6 +141,9 @@ func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
 		BlockFunc(func(g *jen.Group) {
 			for i := 0; i < iface.NumMethods(); i++ {
 				method := iface.Method(i)
+				if !method.Exported() {
+					continue
+				}
 				g.Id("url"+method.Name()).Op(":=").Qual("net/url", "URL").Values(
 					jen.Dict{
 						jen.Id("Scheme"): jen.Lit("https"),
@@ -157,6 +160,9 @@ func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
 			g.Return(jen.Id("EndpointSet").Values(jen.DictFunc(func(d jen.Dict) {
 				for i := 0; i < iface.NumMethods(); i++ {
 					method := iface.Method(i)
+					if !method.Exported() {
+						continue
+					}
 					signature := method.Type().(*types.Signature)
 					params := signature.Params()
 					results := signature.Results()
@@ -202,6 +208,9 @@ func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
 			// TODO: 需要支持可选的 API 路径配置
 			for i := 0; i < iface.NumMethods(); i++ {
 				method := iface.Method(i)
+				if !method.Exported() {
+					continue
+				}
 
 				apiEndpointName := strcase.ToKebab(method.Name())
 				apiServiceName := strcase.ToKebab(svcName)

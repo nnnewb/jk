@@ -3,7 +3,11 @@ package gen
 import (
 	"fmt"
 	"github.com/dave/jennifer/jen"
+	"github.com/juju/errors"
+	"github.com/nnnewb/battery/slices"
 	"go/types"
+	"reflect"
+	"strings"
 )
 
 func InitializeFileCommon(f *jen.File) {
@@ -42,8 +46,8 @@ func checkParams(params *types.Tuple) error {
 }
 
 // checkResults checks if the function signature meets the following requirements:
-//   - The first return value must be an exported struct or slice of structs.
-//   - The first return value must be serializable.
+//   - The first return value must be exported serializable struct.
+//     response struct must have Code (int) and Message (string) field.
 //   - The second return value must be of type error.
 func checkResults(results *types.Tuple) error {
 	// Check first return value.
@@ -53,7 +57,7 @@ func checkResults(results *types.Tuple) error {
 
 	// Check if the first return value is an exported struct or slice of structs
 	if named, ok := results.At(0).Type().(*types.Named); ok {
-		if named.Obj().Exported() == false {
+		if !named.Obj().Exported() {
 			return fmt.Errorf("first return value must be an exported struct or slice of structs")
 		}
 
@@ -61,21 +65,77 @@ func checkResults(results *types.Tuple) error {
 		if !IsSerializable(named.Underlying()) {
 			return fmt.Errorf("first return value must be serializable")
 		}
-	} else if slice, ok := results.At(0).Type().(*types.Slice); ok {
-		if named, ok := slice.Elem().(*types.Named); ok {
-			if named.Obj().Exported() == false {
-				return fmt.Errorf("first return value must be an exported struct or slice of structs")
+
+		var (
+			respStruct = named.Underlying().(*types.Struct)
+			codeOK     bool
+			msgOK      bool
+		)
+
+		for i := 0; i < respStruct.NumFields(); i++ {
+			field := respStruct.Field(i)
+			if !field.Exported() {
+				continue
 			}
 
-			// Check if the first return value is serializable
-			if !IsSerializable(named.Underlying()) {
-				return fmt.Errorf("first return value must be serializable")
+			if field.Name() == "Code" {
+				b, ok := field.Type().(*types.Basic)
+				if ok && b.Kind() != types.Int {
+					return errors.Errorf("response struct %s.%s should have type int", named.Obj().Name(), field.Name())
+				}
+
+				fieldTag := respStruct.Tag(i)
+				jsonTag := reflect.StructTag(fieldTag).Get("json")
+				jsonTags := slices.Slice[string](strings.Split(jsonTag, ","))
+				if len(jsonTags) == 0 {
+					return errors.Errorf("Code field should have json tag and serialized name should be code")
+				}
+
+				// 出现在第一个逗号前的一定是字段名
+				if jsonTags[0] != "code" {
+					return errors.Errorf("Code field should have json tag and serialized name should be code")
+				}
+
+				// code 不能有 omitempty 和 string 这两种 tag，确保序列化的结果必须存在而且是 JSON Number 类型
+				if jsonTags.Any(func(v string) bool { return v == "omitempty" || v == "string" }) {
+					return errors.Errorf("Code field should not have omitempty or string tag")
+				}
+
+				codeOK = true
 			}
-		} else {
-			return fmt.Errorf("first return value must be an exported struct or slice of structs")
+
+			if field.Name() == "Message" {
+				b, ok := field.Type().(*types.Basic)
+				if ok && b.Kind() != types.String {
+					return errors.Errorf("response struct %s.%s should have type string", named.Obj().Name(), field.Name())
+				}
+
+				fieldTag := respStruct.Tag(i)
+				jsonTag := reflect.StructTag(fieldTag).Get("json")
+				jsonTags := slices.Slice[string](strings.Split(jsonTag, ","))
+				if len(jsonTags) == 0 {
+					return errors.Errorf("Code field should have json tag and serialized name should be code")
+				}
+
+				// 出现在第一个逗号前的一定是字段名
+				if jsonTags[0] != "message" {
+					return errors.Errorf("Message field should have json tag and serialized name should be message")
+				}
+
+				// code 不能有 omitempty 和 string 这两种 tag，确保序列化的结果必须存在而且是 JSON Number 类型
+				if jsonTags.Any(func(v string) bool { return v == "omitempty" }) {
+					return errors.Errorf("Message field should not have omitempty tag")
+				}
+
+				msgOK = true
+			}
+		}
+
+		if !msgOK || !codeOK {
+			return errors.Errorf("response struct must have field Code (int) and Message (string)")
 		}
 	} else {
-		return fmt.Errorf("first return value must be an exported struct or slice of structs")
+		return errors.Errorf("illegal first return type %s", results.At(0).Type())
 	}
 
 	// Check second return value.

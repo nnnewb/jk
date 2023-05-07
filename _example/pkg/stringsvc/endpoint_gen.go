@@ -7,51 +7,10 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-// MakeBuyEndpoint create endpoint.Endpoint for function example/pkg/stringsvc.Buy
-func MakeBuyEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		request := req.(BuyRequest)
-		return svc.Buy(ctx, request)
-	}
-}
-
-// MakeJoinEndpoint create endpoint.Endpoint for function example/pkg/stringsvc.Join
-func MakeJoinEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		request := req.(JoinRequest)
-		return svc.Join(ctx, request)
-	}
-}
-
-// MakeJoin2Endpoint create endpoint.Endpoint for function example/pkg/stringsvc.Join2
-func MakeJoin2Endpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		request := req.(Join2Request)
-		return svc.Join2(ctx, request)
-	}
-}
-
-// MakeJoin3Endpoint create endpoint.Endpoint for function example/pkg/stringsvc.Join3
-func MakeJoin3Endpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		request := req.(Join3Request)
-		return svc.Join3(ctx, request)
-	}
-}
-
-// MakeLowercaseEndpoint create endpoint.Endpoint for function example/pkg/stringsvc.Lowercase
-func MakeLowercaseEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		request := req.(LowercaseRequest)
-		return svc.Lowercase(ctx, request)
-	}
-}
-
-// MakeUppercaseEndpoint create endpoint.Endpoint for function example/pkg/stringsvc.Uppercase
-func MakeUppercaseEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		request := req.(UppercaseRequest)
-		return svc.Uppercase(ctx, request)
+func makeEndpointFromFunc[REQ, RESP any](f func(context.Context, REQ) (RESP, error)) endpoint.Endpoint {
+	return func(ctx context.Context, r interface{}) (interface{}, error) {
+		req := r.(REQ)
+		return f(ctx, req)
 	}
 }
 
@@ -92,4 +51,26 @@ func (s EndpointSet) Lowercase(ctx context.Context, req LowercaseRequest) (res L
 func (s EndpointSet) Uppercase(ctx context.Context, req UppercaseRequest) (res UppercaseResponse, err error) {
 	resp, err := s.UppercaseEndpoint(ctx, req)
 	return resp.(UppercaseResponse), err
+}
+
+func NewEndpointSet(svc Service) EndpointSet {
+	return EndpointSet{
+		BuyEndpoint:       makeEndpointFromFunc(svc.Buy),
+		Join2Endpoint:     makeEndpointFromFunc(svc.Join2),
+		Join3Endpoint:     makeEndpointFromFunc(svc.Join3),
+		JoinEndpoint:      makeEndpointFromFunc(svc.Join),
+		LowercaseEndpoint: makeEndpointFromFunc(svc.Lowercase),
+		UppercaseEndpoint: makeEndpointFromFunc(svc.Uppercase),
+	}
+}
+
+func (s EndpointSet) With(outer endpoint.Middleware, others ...endpoint.Middleware) EndpointSet {
+	return EndpointSet{
+		BuyEndpoint:       endpoint.Chain(outer, others...)(s.BuyEndpoint),
+		Join2Endpoint:     endpoint.Chain(outer, others...)(s.Join2Endpoint),
+		Join3Endpoint:     endpoint.Chain(outer, others...)(s.Join3Endpoint),
+		JoinEndpoint:      endpoint.Chain(outer, others...)(s.JoinEndpoint),
+		LowercaseEndpoint: endpoint.Chain(outer, others...)(s.LowercaseEndpoint),
+		UppercaseEndpoint: endpoint.Chain(outer, others...)(s.UppercaseEndpoint),
+	}
 }

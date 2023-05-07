@@ -54,6 +54,13 @@
             "description": "",
             "schema": {
               "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "message": {
+                  "type": "string"
+                },
                 "order_id": {
                   "type": "string"
                 }
@@ -96,6 +103,13 @@
             "description": "",
             "schema": {
               "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "message": {
+                  "type": "string"
+                },
                 "text": {
                   "type": "string"
                 }
@@ -138,6 +152,13 @@
             "description": "",
             "schema": {
               "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "message": {
+                  "type": "string"
+                },
                 "text": {
                   "type": "string"
                 }
@@ -180,6 +201,13 @@
             "description": "",
             "schema": {
               "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "message": {
+                  "type": "string"
+                },
                 "text": {
                   "type": "string"
                 }
@@ -222,6 +250,13 @@
             "description": "",
             "schema": {
               "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "message": {
+                  "type": "string"
+                },
                 "text": {
                   "type": "string"
                 }
@@ -264,6 +299,13 @@
             "description": "",
             "schema": {
               "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "message": {
+                  "type": "string"
+                },
                 "text": {
                   "type": "string"
                 }

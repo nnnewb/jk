@@ -3,58 +3,70 @@ package stringsvc
 import "context"
 
 type Good struct {
-	Name  string
-	Price string
+	Name  string `json:"name,omitempty"`
+	Price string `json:"price,omitempty"`
 }
 
 type BuyRequest struct {
-	Good Good
+	Good Good `json:"good"`
 }
 
 type BuyResponse struct {
-	OrderID string
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	OrderID string `json:"order_id,omitempty"`
 }
 
 type UppercaseRequest struct {
-	Name  string
-	Name2 string
+	Name  string `json:"name,omitempty"`
+	Name2 string `json:"name_2,omitempty"`
 }
 
 type UppercaseResponse struct {
-	Text string
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Text    string `json:"text,omitempty"`
 }
 
 type LowercaseRequest struct {
-	Name  string
-	Name2 string
+	Name  string `json:"name,omitempty"`
+	Name2 string `json:"name_2,omitempty"`
 }
 
 type LowercaseResponse struct {
-	Text string
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Text    string `json:"text,omitempty"`
 }
 
 type JoinRequest struct {
-	Parts []string
+	Parts []string `json:"parts,omitempty"`
 }
 
 type JoinResponse struct {
-	Text string
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Text    string `json:"text,omitempty"`
 }
 
 type Join2Request struct {
-	Parts map[string]string
+	Parts map[string]string `json:"parts,omitempty"`
 }
 
 type Join2Response struct {
-	Text string
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Text    string `json:"text,omitempty"`
 }
 
 type Join3Request struct {
-	Parts map[string]string
+	Parts map[string]string `json:"parts,omitempty"`
 }
 
 type Join3Response struct {
-	Text string
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Text    string `json:"text,omitempty"`
 }
 
 //go:generate jk generate all -t Service

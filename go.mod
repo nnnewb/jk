@@ -7,6 +7,7 @@ require (
 	github.com/go-openapi/spec v0.20.9
 	github.com/iancoleman/strcase v0.2.0
 	github.com/juju/errors v1.0.0
+	github.com/nnnewb/battery v0.0.0-20230426020229-824bb2a2568a
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4

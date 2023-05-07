@@ -7,6 +7,8 @@ import (
 	"github.com/juju/errors"
 	"go/types"
 	"io"
+	"reflect"
+	"strings"
 )
 
 func GenerateSwagger(wr io.Writer, svc *types.Named, apiVer, Ver string) error {
@@ -131,10 +133,30 @@ func generateSchemaFromType(typ types.Type) *spec.Schema {
 		// Iterate over all the fields of the struct
 		for i := 0; i < t.NumFields(); i++ {
 			field := t.Field(i)
+			if !field.Exported() {
+				continue
+			}
+
+			jsonTag := reflect.StructTag(t.Tag(i)).Get("json")
+			if jsonTag == "-" {
+				continue
+			}
+
+			var jsonName string
+			for _, v := range strings.Split(jsonTag, ",") {
+				if v != "omitempty" && strings.TrimSpace(v) != "" {
+					jsonName = v
+					break
+				}
+			}
+
+			if jsonName == "" {
+				jsonName = field.Name()
+			}
+
 			// Check if the field is exported
 			if field.Exported() {
-				fieldName := strcase.ToSnake(field.Name())
-				ret.Properties[fieldName] = *generateSchemaFromType(field.Type())
+				ret.Properties[jsonName] = *generateSchemaFromType(field.Type())
 			}
 		}
 		return ret
