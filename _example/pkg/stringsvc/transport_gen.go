@@ -15,15 +15,27 @@ import (
 	"net/url"
 )
 
+type httpTransportRequestKeyType struct{}
+
+var httpTransportRequestKey httpTransportRequestKeyType
+
+// GetRequestFromContext get *http.Request from context.Context object. if no request associated, return nil.
+func GetRequestFromContext(ctx context.Context) *http.Request {
+	req, _ := ctx.Value(httpTransportRequestKey).(*http.Request)
+	return req
+}
+
 func makeHandlerFunc[REQ any, RESP any](f func(context.Context, REQ) (RESP, error)) http.HandlerFunc {
 	return func(wr http.ResponseWriter, request *http.Request) {
+		defer request.Body.Close()
 		var payload REQ
 		err := json.NewDecoder(request.Body).Decode(&payload)
 		if err != nil {
 			panic(errors.Errorf("unexpected unmarshal error %+v", err))
 		}
 
-		resp, err := f(request.Context(), payload)
+		ctx := context.WithValue(request.Context(), httpTransportRequestKey, request)
+		resp, err := f(ctx, payload)
 		err = json.NewEncoder(wr).Encode(resp)
 		if err != nil {
 			panic(errors.Errorf("unexpected unmarshal error %+v", err))

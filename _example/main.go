@@ -11,7 +11,8 @@ import (
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	router := httprouter.New()
-	stringsvc.Register(stringsvc1.Svc{}, router)
+	svr := stringsvc.NewEndpointSet(stringsvc1.Svc{})
+	stringsvc.Register(svr, router)
 	log.Println("Server now listening at https://127.0.0.1:8888/")
 	// generate self-signed certificate with openssl cli
 	//

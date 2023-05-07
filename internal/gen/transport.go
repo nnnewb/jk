@@ -7,13 +7,12 @@ import (
 	"go/types"
 )
 
-func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
-	var (
-		iface   = svc.Underlying().(*types.Interface)
-		svcName = svc.Obj().Name()
-		pkgPath = svc.Obj().Pkg().Path()
-	)
+func generateContextKeyDeclaration(f *jen.File) {
+	f.Type().Id("httpTransportRequestKeyType").Struct()
+	f.Var().Id("httpTransportRequestKey").Id("httpTransportRequestKeyType")
+}
 
+func generateMakeHandlerFunc(f *jen.File) {
 	// makeHandlerFunc[REQ,RESP any](f func(context.Context, REQ) (RESP, error)) http.HandlerFunc {
 	f.Func().Id("makeHandlerFunc").
 		Types(jen.Id("REQ").Any(), jen.Id("RESP").Any()).
@@ -31,6 +30,8 @@ func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
 						jen.Id("request").Op("*").Qual("net/http", "Request"),
 					)).
 				BlockFunc(func(g *jen.Group) {
+					// defer request.Body.Close()
+					g.Defer().Id("request").Dot("Body").Dot("Close").Call()
 					// var payload REQ
 					g.Var().Id("payload").Id("REQ")
 					// err := json.NewDecoder(req.Body).Decode(&payload)
@@ -42,10 +43,16 @@ func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
 						g.Panic(jen.Qual("github.com/juju/errors", "Errorf").Call(
 							jen.Lit("unexpected unmarshal error %+v"), jen.Id("err")))
 					}).Line()
+					// ctx := context.WithValue(request.Context(), httpTransportRequestKey, req)
+					g.Id("ctx").Op(":=").Qual("context", "WithValue").
+						Call(
+							jen.Id("request").Dot("Context").Call(),
+							jen.Id("httpTransportRequestKey"),
+							jen.Id("request"))
 					// resp, err := svc.Method(request.Context(), payload)
 					g.List(jen.Id("resp"), jen.Id("err")).Op(":=").
 						Id("f").Call(
-						jen.Id("request").Dot("Context").Call(),
+						jen.Id("ctx"),
 						jen.Id("payload"))
 					// err = json.NewEncoder(wr).Encode(resp)
 					g.Id("err").Op("=").
@@ -58,7 +65,37 @@ func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
 					})
 				})
 		}).Line()
+}
 
+func generateGetRequestFromContext(j *jen.File) {
+	j.Commentf("// GetRequestFromContext get *http.Request from context.Context object. if no request associated, return nil.")
+	j.Func().Id("GetRequestFromContext").
+		Params(jen.Id("ctx").Qual("context", "Context")).
+		Params(jen.Op("*").Qual("net/http", "Request")).
+		BlockFunc(func(g *jen.Group) {
+			g.List(jen.Id("req"), jen.Id("_")).Op(":=").
+				Id("ctx").Dot("Value").Call(jen.Id("httpTransportRequestKey")).
+				Assert(jen.Op("*").Qual("net/http", "Request"))
+			g.Return(jen.Id("req"))
+		}).Line()
+}
+
+func generateGetOperationNameFromContext(f *jen.File) {
+	// TODO: useful with tracing
+	f.Func().Id("GetOperationNameFromContext").
+		Params(jen.Id("ctx").Qual("context", "Context"), jen.Id("defaultOperationName").String()).
+		String().
+		BlockFunc(func(g *jen.Group) {
+			g.Id("req").Op(":=").Id("GetRequestFromContext").Call(jen.Id("ctx"))
+			g.If(jen.Id("req").Op("!=").Nil()).
+				BlockFunc(func(g *jen.Group) {
+					g.Return(jen.Id("req").Dot("URL").Dot("Path"))
+				})
+			g.Return(jen.Lit("no http request associated, can not get operation name"))
+		}).Line()
+}
+
+func generateMakeRemoteEndpoint(f *jen.File) {
 	f.Func().Id("makeRemoteEndpoint").
 		Types(jen.Id("REQ").Any(), jen.Id("RESP").Any()).
 		Params(jen.Id("remoteUrl").String(), jen.Id("client").Op("*").Qual("net/http", "Client")).
@@ -134,7 +171,14 @@ func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
 					g.Return(jen.Id("resp"), jen.Nil())
 				}))
 		}).Line()
+}
 
+func generateNewClient(f *jen.File, svc *types.Named) {
+	var (
+		iface   = svc.Underlying().(*types.Interface)
+		svcName = svc.Obj().Name()
+		pkgPath = svc.Obj().Pkg().Path()
+	)
 	f.Func().Id("NewClient").
 		Params(jen.Id("host").String(), jen.Id("client").Op("*").Qual("net/http", "Client")).
 		Params(jen.Qual(pkgPath, svcName)).
@@ -176,11 +220,21 @@ func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
 				}
 			})))
 		}).Line()
+}
 
+func generateEmbedSwaggerJSON(f *jen.File) {
 	// //go:embed swagger.json
 	f.Commentf("//go:embed swagger.json")
 	// var swagger embed.FS
 	f.Var().Id("swagger").Qual("embed", "FS")
+}
+
+func generateRegister(f *jen.File, svc *types.Named) {
+	var (
+		iface   = svc.Underlying().(*types.Interface)
+		svcName = svc.Obj().Name()
+		pkgPath = svc.Obj().Pkg().Path()
+	)
 
 	f.Func().Id("Register").
 		Params(jen.Id("svc").Qual(pkgPath, svcName), jen.Id("m").Op("*").Qual("github.com/julienschmidt/httprouter", "Router")).
@@ -222,5 +276,22 @@ func GenerateTransportLayerHTTP(f *jen.File, svc *types.Named) error {
 				)
 			}
 		}).Line()
-	return nil
+}
+
+func generateTraceServer(f *jen.File, svc *types.Named) {
+	panic("not implemented") // TODO: implement
+}
+
+func generateTraceClient(f *jen.File, svc *types.Named) {
+	panic("not implemented") // TODO: implement
+}
+
+func GenerateHTTPTransport(f *jen.File, svc *types.Named) {
+	generateContextKeyDeclaration(f)
+	generateGetRequestFromContext(f)
+	generateMakeHandlerFunc(f)
+	generateMakeRemoteEndpoint(f)
+	generateNewClient(f, svc)
+	generateEmbedSwaggerJSON(f)
+	generateRegister(f, svc)
 }
