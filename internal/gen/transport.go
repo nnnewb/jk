@@ -7,91 +7,125 @@ import (
 	"go/types"
 )
 
-func generateContextKeyDeclaration(f *jen.File) {
-	f.Type().Id("httpTransportRequestKeyType").Struct()
-	f.Var().Id("httpTransportRequestKey").Id("httpTransportRequestKeyType")
+func generateClientSet(f *jen.File, svc *types.Named) {
+	iface := svc.Underlying().(*types.Interface)
+	f.Type().Id("HTTPClientSet").StructFunc(func(g *jen.Group) {
+		for i := 0; i < iface.NumMethods(); i++ {
+			method := iface.Method(i)
+			if !method.Exported() {
+				continue
+			}
+
+			g.Id(method.Name()+"Client").Qual("github.com/go-kit/kit/transport/http", "Client")
+		}
+	}).Line()
 }
 
-func generateMakeHandlerFunc(f *jen.File) {
-	// makeHandlerFunc[REQ,RESP any](f func(context.Context, REQ) (RESP, error)) http.HandlerFunc {
-	f.Func().Id("makeHandlerFunc").
-		Types(jen.Id("REQ").Any(), jen.Id("RESP").Any()).
-		Params(jen.Id("f").
-			Func().
-			Params(jen.Qual("context", "Context"), jen.Id("REQ")).
-			Params(jen.Id("RESP"), jen.Error())).
-		Qual("net/http", "HandlerFunc").
+func generateServerSet(f *jen.File, svc *types.Named) {
+	iface := svc.Underlying().(*types.Interface)
+	f.Type().Id("HTTPServerSet").StructFunc(func(g *jen.Group) {
+		for i := 0; i < iface.NumMethods(); i++ {
+			method := iface.Method(i)
+			if !method.Exported() {
+				continue
+			}
+
+			g.Id(method.Name()+"Server").Qual("github.com/go-kit/kit/transport/http", "Server")
+		}
+	}).Line()
+}
+
+func generateHTTPJSONRequestDecoder(f *jen.File) {
+	// func httpJSONRequestDecoder[T any](ctx context.Context, req *http.Request) (any, error) {
+	f.Func().
+		Id("httpJSONRequestDecoder").
+		Types(jen.Id("T").Any()).
+		Params(
+			jen.Id("ctx").Qual("context", "Context"),
+			jen.Id("req").Op("*").Qual("net/http", "Request")).
+		Params(
+			jen.Any(),
+			jen.Error()).
 		BlockFunc(func(g *jen.Group) {
-			// return func(wr http.ResponseWriter, request *http.Request) {
+			// var request T
+			g.Var().Id("request").Id("T")
+			// err := json.NewDecoder(req.Body).Decode(&request)
+			g.Err().Op(":=").Qual("encoding/json", "NewDecoder").Call(jen.Id("req").Dot("Body")).Dot("Decode").
+				Call(jen.Op("&").Id("request"))
+			// if err != nil { return nil, err }
+			g.If(jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Nil(), jen.Err()))
+			// return &request,nil
+			g.Return(jen.Op("&").Id("request"), jen.Nil())
+		}).Line()
+}
+
+func generateHTTPJSONResponseDecoder(f *jen.File) {
+	// func httpJSONResponseDecoder[T any](ctx context.Context, req *http.Response) (any, error) {
+	f.Func().
+		Id("httpJSONResponseDecoder").
+		Types(jen.Id("T").Any()).
+		Params(
+			jen.Id("ctx").Qual("context", "Context"),
+			jen.Id("resp").Op("*").Qual("net/http", "Response")).
+		Params(
+			jen.Any(),
+			jen.Error()).
+		BlockFunc(func(g *jen.Group) {
+			// var response T
+			g.Var().Id("response").Id("T")
+			// defer resp.Body.Close()
+			g.Defer().Id("resp").Dot("Body").Dot("Close").Call()
+			// err := json.NewDecoder(resp.Body).Decode(&response)
+			g.Err().Op(":=").Qual("encoding/json", "NewDecoder").Call(jen.Id("resp").Dot("Body")).Dot("Decode").
+				Call(jen.Op("&").Id("response"))
+			// if err != nil { return nil, err }
+			g.If(jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Nil(), jen.Err()))
+			// return &response, nil
+			g.Return(jen.Op("&").Id("response"), jen.Nil())
+		}).Line()
+}
+
+func generateHTTPJSONRequestEncoder(f *jen.File) {
+	// func httpJSONRequestEncoder[T any](ctx context.Context, req *http.Request, request any) (any, error) {
+	f.Func().
+		Id("httpJSONRequestEncoder").
+		Types(jen.Id("T").Any()).
+		Params(
+			jen.Id("ctx").Qual("context", "Context"),
+			jen.Id("req").Op("*").Qual("net/http", "Request"),
+			jen.Id("request").Any()).
+		Error().
+		BlockFunc(func(g *jen.Group) {
+			// var buffer bytes.Buffer
+			g.Var().Id("buffer").Qual("bytes", "Buffer")
+			// err := json.NewEncoder(&buffer).Encode(request)
+			g.Err().Op(":=").
+				Qual("encoding/json", "NewEncoder").Call(jen.Op("&").Id("buffer")).
+				Dot("Encode").Call(jen.Id("request"))
+			// if err != nil { return err }
+			g.If(jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Err()))
+			// req.Body = &buffer
+			g.Id("req").Dot("Body").Op("=").Qual("io", "NopCloser").Call(jen.Op("&").Id("buffer"))
+			// return nil
+			g.Return(jen.Nil())
+		}).Line()
+}
+
+func generateHTTPJSONResponseEncoder(f *jen.File) {
+	// func httpJSONResponseEncoder[T any](ctx context.Context, req *http.Request) (any, error) {
+	f.Func().
+		Id("httpJSONResponseEncoder").
+		Types(jen.Id("T").Any()).
+		Params(
+			jen.Id("ctx").Qual("context", "Context"),
+			jen.Id("wr").Qual("net/http", "ResponseWriter"),
+			jen.Id("resp").Any()).
+		Error().
+		BlockFunc(func(g *jen.Group) {
+			// return json.NewEncoder(wr).Encode(resp)
 			g.Return(
-				jen.Func().
-					Params(
-						jen.Id("wr").Qual("net/http", "ResponseWriter"),
-						jen.Id("request").Op("*").Qual("net/http", "Request"),
-					)).
-				BlockFunc(func(g *jen.Group) {
-					// defer request.Body.Close()
-					g.Defer().Id("request").Dot("Body").Dot("Close").Call()
-					// var payload REQ
-					g.Var().Id("payload").Id("REQ")
-					// err := json.NewDecoder(req.Body).Decode(&payload)
-					g.Id("err").Op(":=").
-						Qual("encoding/json", "NewDecoder").Call(jen.Id("request").Dot("Body")).
-						Dot("Decode").Call(jen.Op("&").Id("payload"))
-					// if err != nil {
-					g.If(jen.Id("err").Op("!=").Nil()).BlockFunc(func(g *jen.Group) {
-						g.Panic(jen.Qual("github.com/juju/errors", "Errorf").Call(
-							jen.Lit("unexpected unmarshal error %+v"), jen.Id("err")))
-					}).Line()
-					// ctx := context.WithValue(request.Context(), httpTransportRequestKey, req)
-					g.Id("ctx").Op(":=").Qual("context", "WithValue").
-						Call(
-							jen.Id("request").Dot("Context").Call(),
-							jen.Id("httpTransportRequestKey"),
-							jen.Id("request"))
-					// resp, err := svc.Method(request.Context(), payload)
-					g.List(jen.Id("resp"), jen.Id("err")).Op(":=").
-						Id("f").Call(
-						jen.Id("ctx"),
-						jen.Id("payload"))
-					// err = json.NewEncoder(wr).Encode(resp)
-					g.Id("err").Op("=").
-						Qual("encoding/json", "NewEncoder").Call(jen.Id("wr")).
-						Dot("Encode").Call(jen.Id("resp"))
-					// if err != nil {
-					g.If(jen.Id("err").Op("!=").Nil()).BlockFunc(func(g *jen.Group) {
-						g.Panic(jen.Qual("github.com/juju/errors", "Errorf").Call(
-							jen.Lit("unexpected unmarshal error %+v"), jen.Id("err")))
-					})
-				})
-		}).Line()
-}
-
-func generateGetRequestFromContext(j *jen.File) {
-	j.Commentf("// GetRequestFromContext get *http.Request from context.Context object. if no request associated, return nil.")
-	j.Func().Id("GetRequestFromContext").
-		Params(jen.Id("ctx").Qual("context", "Context")).
-		Params(jen.Op("*").Qual("net/http", "Request")).
-		BlockFunc(func(g *jen.Group) {
-			g.List(jen.Id("req"), jen.Id("_")).Op(":=").
-				Id("ctx").Dot("Value").Call(jen.Id("httpTransportRequestKey")).
-				Assert(jen.Op("*").Qual("net/http", "Request"))
-			g.Return(jen.Id("req"))
-		}).Line()
-}
-
-func generateGetOperationNameFromContext(f *jen.File) {
-	// TODO: useful with tracing
-	f.Func().Id("GetOperationNameFromContext").
-		Params(jen.Id("ctx").Qual("context", "Context"), jen.Id("defaultOperationName").String()).
-		String().
-		BlockFunc(func(g *jen.Group) {
-			g.Id("req").Op(":=").Id("GetRequestFromContext").Call(jen.Id("ctx"))
-			g.If(jen.Id("req").Op("!=").Nil()).
-				BlockFunc(func(g *jen.Group) {
-					g.Return(jen.Id("req").Dot("URL").Dot("Path"))
-				})
-			g.Return(jen.Lit("no http request associated, can not get operation name"))
+				jen.Qual("encoding/json", "NewEncoder").Call(jen.Id("wr")).
+					Dot("Encode").Call(jen.Id("resp")))
 		}).Line()
 }
 
@@ -173,13 +207,13 @@ func generateMakeRemoteEndpoint(f *jen.File) {
 		}).Line()
 }
 
-func generateNewClient(f *jen.File, svc *types.Named) {
+func generateNewHTTPClient(f *jen.File, svc *types.Named) {
 	var (
 		iface   = svc.Underlying().(*types.Interface)
 		svcName = svc.Obj().Name()
 		pkgPath = svc.Obj().Pkg().Path()
 	)
-	f.Func().Id("NewClient").
+	f.Func().Id("NewHTTPClient").
 		Params(jen.Id("host").String(), jen.Id("client").Op("*").Qual("net/http", "Client")).
 		Params(jen.Qual(pkgPath, svcName)).
 		BlockFunc(func(g *jen.Group) {
@@ -233,11 +267,10 @@ func generateRegister(f *jen.File, svc *types.Named) {
 	var (
 		iface   = svc.Underlying().(*types.Interface)
 		svcName = svc.Obj().Name()
-		pkgPath = svc.Obj().Pkg().Path()
 	)
 
 	f.Func().Id("Register").
-		Params(jen.Id("svc").Qual(pkgPath, svcName), jen.Id("m").Op("*").Qual("github.com/julienschmidt/httprouter", "Router")).
+		Params(jen.Id("svc").Id("EndpointSet"), jen.Id("m").Op("*").Qual("github.com/julienschmidt/httprouter", "Router")).
 		BlockFunc(func(g *jen.Group) {
 			// m.Handle("/swagger/service/spec/", http.FileServer(http.FS(swagger)))
 			g.Id("m").Dot("Handler").Call(
@@ -265,33 +298,33 @@ func generateRegister(f *jen.File, svc *types.Named) {
 				if !method.Exported() {
 					continue
 				}
+				signature := method.Type().(*types.Signature)
+				reqType := signature.Params().At(1).Type().(*types.Named)
+				respType := signature.Results().At(0).Type().(*types.Named)
 
 				apiEndpointName := strcase.ToKebab(method.Name())
 				apiServiceName := strcase.ToKebab(svcName)
 				g.Id("m").Dot("Handler").Call(
 					jen.Qual("net/http", "MethodPost"),
 					jen.Lit(fmt.Sprintf("/api/v1/%s/%s", apiServiceName, apiEndpointName)),
-
-					jen.Id("makeHandlerFunc").Call(jen.Id("svc").Dot(method.Name())),
-				)
+					jen.Qual("github.com/go-kit/kit/transport/http", "NewServer").Call(
+						jen.Id("svc").Dot(method.Name()+"Endpoint"),
+						jen.Id("httpJSONRequestDecoder").Types(jen.Qual(reqType.Obj().Pkg().Path(), reqType.Obj().Name())),
+						jen.Id("httpJSONResponseEncoder").Types(jen.Qual(respType.Obj().Pkg().Path(), respType.Obj().Name())),
+					))
 			}
 		}).Line()
 }
 
-func generateTraceServer(f *jen.File, svc *types.Named) {
-	panic("not implemented") // TODO: implement
-}
-
-func generateTraceClient(f *jen.File, svc *types.Named) {
-	panic("not implemented") // TODO: implement
-}
-
 func GenerateHTTPTransport(f *jen.File, svc *types.Named) {
-	generateContextKeyDeclaration(f)
-	generateGetRequestFromContext(f)
-	generateMakeHandlerFunc(f)
+	generateClientSet(f, svc)
+	generateServerSet(f, svc)
+	generateHTTPJSONRequestDecoder(f)
+	generateHTTPJSONRequestEncoder(f)
+	generateHTTPJSONResponseEncoder(f)
+	generateHTTPJSONResponseDecoder(f)
 	generateMakeRemoteEndpoint(f)
-	generateNewClient(f, svc)
+	generateNewHTTPClient(f, svc)
 	generateEmbedSwaggerJSON(f)
 	generateRegister(f, svc)
 }

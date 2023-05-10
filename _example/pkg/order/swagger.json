@@ -1,0 +1,191 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "title": "OrderService",
+    "version": "0.1.0"
+  },
+  "host": "localhost",
+  "basePath": "/api/v1/OrderService",
+  "paths": {
+    "/cancel-order": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "OrderService"
+        ],
+        "operationId": "cancel-order",
+        "parameters": [
+          {
+            "name": "payload",
+            "in": "body",
+            "schema": {
+              "properties": {
+                "order_id": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "schema": {
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/create-order": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "OrderService"
+        ],
+        "operationId": "create-order",
+        "parameters": [
+          {
+            "name": "payload",
+            "in": "body",
+            "schema": {
+              "properties": {
+                "order_info": {
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "item_id": {
+                        "type": "string"
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "format": "int64"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "schema": {
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "order_id": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-order-detail": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "OrderService"
+        ],
+        "operationId": "get-order-detail",
+        "parameters": [
+          {
+            "name": "payload",
+            "in": "body",
+            "schema": {
+              "properties": {
+                "order_id": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "schema": {
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "order_info": {
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "item_id": {
+                        "type": "string"
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "format": "int64"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "api_key": {
+      "description": "simple api key",
+      "type": "apiKey",
+      "name": "X-Authentication",
+      "in": "header"
+    }
+  },
+  "tags": [
+    {
+      "name": "OrderService"
+    }
+  ]
+}
