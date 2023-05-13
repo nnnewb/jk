@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"fmt"
 	"github.com/dave/jennifer/jen"
 	"github.com/juju/errors"
 	"go/types"
@@ -50,47 +49,30 @@ func generateEndpointSet(file *jen.File, svc *types.Named) {
 		receiverTyp := "EndpointSet"
 		receiver := strings.ToLower(svc.Obj().Name()[:1])
 		endpointFunc := method.Name() + "Endpoint"
+		reqType := params.At(1).Type().(*types.Named)
+		respType := results.At(0).Type().(*types.Named)
 
 		file.Func().
 			Params(jen.Id(receiver).Id(receiverTyp)).
 			Id(method.Name()).
-			ParamsFunc(func(g *jen.Group) {
-				for i := 0; i < params.Len(); i++ {
-					param := params.At(i)
-					name := fmt.Sprintf("arg%d", i)
-					if param.Name() != "" {
-						name = param.Name()
-					}
-
-					g.Id(name).Add(generateTypeCode(param.Type()))
-				}
-			}).
-			ParamsFunc(func(g *jen.Group) {
-				for i := 0; i < results.Len(); i++ {
-					result := results.At(i)
-					name := fmt.Sprintf("arg%d", i)
-					if result.Name() != "" {
-						name = result.Name()
-					}
-
-					g.Id(name).Add(generateTypeCode(result.Type()))
-				}
-			}).
+			Params(
+				jen.Id("ctx").Qual("context", "Context"),
+				jen.Id("req").Qual(reqType.Obj().Pkg().Path(), reqType.Obj().Name())).
+			Params(
+				jen.Qual(respType.Obj().Pkg().Path(), respType.Obj().Name()),
+				jen.Error()).
 			BlockFunc(func(g *jen.Group) {
-				g.List(jen.Id("resp"), jen.Id("err")).
+				g.List(jen.Id("resp"), jen.Err()).
 					Op(":=").
-					Id(receiver).Dot(endpointFunc).CallFunc(func(g *jen.Group) {
-					for i := 0; i < params.Len(); i++ {
-						param := params.At(i)
-						if param.Name() != "" {
-							g.Id(param.Name())
-						} else {
-							g.Id(fmt.Sprintf("arg%d", i))
-						}
-					}
-				})
-				g.Return(jen.Id("resp").Assert(generateTypeCode(results.At(0).Type())), jen.Id("err"))
-			}).Line().Line()
+					Id(receiver).Dot(endpointFunc).Call(jen.Id("ctx"), jen.Id("req")).
+					Line()
+				// if err != nil { return RESP{}, err }
+				g.If(jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Qual(respType.Obj().Pkg().Path(), respType.Obj().Name()).Values(), jen.Err()))
+				// return resp.(RESP), nil
+				g.Return(
+					jen.Id("resp").Assert(jen.Qual(respType.Obj().Pkg().Path(), respType.Obj().Name())),
+					jen.Nil())
+			}).Line()
 	}
 
 	file.Func().

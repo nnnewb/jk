@@ -14,6 +14,7 @@ func InitializeFileCommon(f *jen.File) {
 	f.ImportAlias("github.com/swaggo/http-swagger/v2", "httpSwagger")
 	f.ImportName("github.com/juju/errors", "errors")
 	f.ImportName("github.com/go-kit/kit/endpoint", "endpoint")
+	f.ImportAlias("github.com/go-kit/kit/transport/http", "khttp")
 }
 
 // checkParams checks if the function signature meets the following requirements:
@@ -130,7 +131,6 @@ func checkResults(results *types.Tuple) error {
 				msgOK = true
 			}
 		}
-
 		if !msgOK || !codeOK {
 			return errors.Errorf("response struct must have field Code (int) and Message (string)")
 		}
