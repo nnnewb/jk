@@ -5,12 +5,12 @@ go 1.18
 require (
 	github.com/go-kit/kit v0.12.0
 	github.com/julienschmidt/httprouter v1.3.0
+	github.com/nnnewb/otelkit v0.1.0
 	github.com/swaggo/http-swagger/v2 v2.0.1
 	github.com/uber/jaeger-client-go v2.30.0+incompatible
 	go.opentelemetry.io/otel v1.15.1
 	go.opentelemetry.io/otel/exporters/jaeger v1.15.1
 	go.opentelemetry.io/otel/sdk v1.15.1
-	go.opentelemetry.io/otel/trace v1.15.1
 )
 
 require (
@@ -29,6 +29,7 @@ require (
 	github.com/swaggo/files/v2 v2.0.0 // indirect
 	github.com/swaggo/swag v1.8.1 // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
+	go.opentelemetry.io/otel/trace v1.15.1 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/tools v0.1.12 // indirect
