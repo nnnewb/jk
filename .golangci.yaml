@@ -1,0 +1,32 @@
+linters:
+  disable-all: true
+  enable:
+    - staticcheck
+    - gofumpt
+    - goimports
+    - goconst
+    - bodyclose
+    - asciicheck
+
+linters-settings:
+  staticcheck:
+    go: "1.18"
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+    ignore-tests: true
+    numbers: true
+    min: 3
+    max: 3
+  gofumpt:
+    lang-version: "1.18"
+    module-path: "github.com/nnnewb/jk"
+  goimports:
+    local-prefixes: "github.com/nnnewb/jk"
+
+run:
+  go: "1.18"
+  tests: false
+  skip-files:
+    - ".*_test.go"
+    - ".*_gen.go"
