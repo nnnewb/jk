@@ -2,12 +2,13 @@ package gen
 
 import (
 	"fmt"
+	"go/types"
+
 	"github.com/dave/jennifer/jen"
 	"github.com/iancoleman/strcase"
-	"go/types"
 )
 
-func generateClientSet(f *jen.File, svc *types.Named) {
+func generateClientSet(f *jen.File, svc *types.Named, apiVer string) {
 	iface := svc.Underlying().(*types.Interface)
 	f.Type().Id("HTTPClientSet").StructFunc(func(g *jen.Group) {
 		for i := 0; i < iface.NumMethods(); i++ {
@@ -63,7 +64,8 @@ func generateClientSet(f *jen.File, svc *types.Named) {
 									jen.Id("port"))
 								d[jen.Id("Path")] = jen.Lit(
 									fmt.Sprintf(
-										"/api/v1/%s/%s",
+										"/api/%s/%s/%s",
+										apiVer,
 										strcase.ToKebab(svc.Obj().Name()),
 										strcase.ToKebab(method.Name())))
 							})),
@@ -100,7 +102,7 @@ func generateClientSet(f *jen.File, svc *types.Named) {
 		}).Line()
 }
 
-func generateServerSet(f *jen.File, svc *types.Named) {
+func generateServerSet(f *jen.File, svc *types.Named, apiVer string) {
 	iface := svc.Underlying().(*types.Interface)
 	svcName := svc.Obj().Name()
 
@@ -189,12 +191,12 @@ func generateServerSet(f *jen.File, svc *types.Named) {
 					continue
 				}
 
-				// m.Handler(http.MethodPost, "/api/v1/SERVICE/ENDPOINT", s.XXXServer)
+				// m.Handler(http.MethodPost, "/api/VER/SERVICE/ENDPOINT", s.XXXServer)
 				apiEndpointName := strcase.ToKebab(method.Name())
 				apiServiceName := strcase.ToKebab(svcName)
 				g.Id("m").Dot("Handler").Call(
 					jen.Line().Qual("net/http", "MethodPost"),
-					jen.Line().Lit(fmt.Sprintf("/api/v1/%s/%s", apiServiceName, apiEndpointName)),
+					jen.Line().Lit(fmt.Sprintf("/api/%s/%s/%s", apiVer, apiServiceName, apiEndpointName)),
 					jen.Line().Id("s").Dot(method.Name()+"Server"),
 				)
 			}
@@ -260,10 +262,10 @@ func generateEmbedSwaggerJSON(f *jen.File) {
 	f.Var().Id("swagger").Qual("embed", "FS")
 }
 
-func GenerateHTTPTransport(f *jen.File, svc *types.Named) {
+func GenerateHTTPTransport(f *jen.File, svc *types.Named, ver string) {
 	generateHTTPJSONRequestDecoder(f)
 	generateHTTPJSONResponseDecoder(f)
 	generateEmbedSwaggerJSON(f)
-	generateClientSet(f, svc)
-	generateServerSet(f, svc)
+	generateClientSet(f, svc, ver)
+	generateServerSet(f, svc, ver)
 }

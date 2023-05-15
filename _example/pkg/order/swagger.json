@@ -15,7 +15,7 @@
     "version": "0.1.0"
   },
   "host": "localhost",
-  "basePath": "/api/v1/OrderService",
+  "basePath": "/api/v2/OrderService",
   "paths": {
     "/cancel-order": {
       "post": {

@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	stdlog "log"
+	"net/http"
+	"time"
+
 	khttp "github.com/go-kit/kit/transport/http"
 	"github.com/nnnewb/otelkit"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	stdlog "log"
-	"net/http"
-	"time"
 
 	order1 "example/internal/order"
 	"example/pkg/order"

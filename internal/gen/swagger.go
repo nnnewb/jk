@@ -2,13 +2,14 @@ package gen
 
 import (
 	"fmt"
-	"github.com/go-openapi/spec"
-	"github.com/iancoleman/strcase"
-	"github.com/juju/errors"
 	"go/types"
 	"io"
 	"reflect"
 	"strings"
+
+	"github.com/go-openapi/spec"
+	"github.com/iancoleman/strcase"
+	"github.com/juju/errors"
 )
 
 func GenerateSwagger(wr io.Writer, svc *types.Named, apiVer, Ver string) error {

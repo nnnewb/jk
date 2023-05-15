@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-//go:generate jk generate all -t OrderService
+//go:generate jk generate all -t OrderService --api-version v2
 type OrderService interface {
 	// CreateOrder 创建订单
 	CreateOrder(ctx context.Context, req CreateOrderRequest) (CreateOrderResponse, error)

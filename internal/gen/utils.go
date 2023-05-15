@@ -2,12 +2,13 @@ package gen
 
 import (
 	"fmt"
-	"github.com/dave/jennifer/jen"
-	"github.com/juju/errors"
-	"github.com/nnnewb/battery/slices"
 	"go/types"
 	"reflect"
 	"strings"
+
+	"github.com/dave/jennifer/jen"
+	"github.com/juju/errors"
+	"github.com/nnnewb/battery/slices"
 )
 
 func InitializeFileCommon(f *jen.File) {

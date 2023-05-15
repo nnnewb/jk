@@ -1,12 +1,13 @@
 package utils
 
 import (
-	"github.com/juju/errors"
-	"golang.org/x/mod/modfile"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/juju/errors"
+	"golang.org/x/mod/modfile"
 )
 
 // ResolveFullPackagePath 从给定路径向上搜索go模块根目录，返回完整包名

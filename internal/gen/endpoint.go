@@ -1,10 +1,11 @@
 package gen
 
 import (
-	"github.com/dave/jennifer/jen"
-	"github.com/juju/errors"
 	"go/types"
 	"strings"
+
+	"github.com/dave/jennifer/jen"
+	"github.com/juju/errors"
 )
 
 func generateEndpointFactory(file *jen.File) {
