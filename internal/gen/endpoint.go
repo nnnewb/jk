@@ -6,6 +6,7 @@ import (
 
 	"github.com/dave/jennifer/jen"
 	"github.com/juju/errors"
+	"github.com/nnnewb/jk/internal/utils"
 )
 
 func generateEndpointFactory(file *jen.File) {
@@ -27,10 +28,10 @@ func generateEndpointFactory(file *jen.File) {
 }
 
 func generateEndpointSet(file *jen.File, svc *types.Named) {
-	iface := svc.Underlying().(*types.Interface)
+	interfaceType := svc.Underlying().(*types.Interface)
 	file.Type().Id("EndpointSet").StructFunc(func(g *jen.Group) {
-		for i := 0; i < iface.NumMethods(); i++ {
-			method := iface.Method(i)
+		for i := 0; i < interfaceType.NumMethods(); i++ {
+			method := interfaceType.Method(i)
 			if !method.Exported() {
 				continue
 			}
@@ -38,8 +39,8 @@ func generateEndpointSet(file *jen.File, svc *types.Named) {
 		}
 	}).Line()
 
-	for i := 0; i < iface.NumMethods(); i++ {
-		method := iface.Method(i)
+	for i := 0; i < interfaceType.NumMethods(); i++ {
+		method := interfaceType.Method(i)
 		if !method.Exported() {
 			continue
 		}
@@ -50,17 +51,19 @@ func generateEndpointSet(file *jen.File, svc *types.Named) {
 		receiverTyp := "EndpointSet"
 		receiver := strings.ToLower(svc.Obj().Name()[:1])
 		endpointFunc := method.Name() + "Endpoint"
-		reqType := params.At(1).Type().(*types.Named)
-		respType := results.At(0).Type().(*types.Named)
+		reqPtrType := params.At(1).Type().(*types.Pointer)
+		respPtrType := results.At(0).Type().(*types.Pointer)
+		reqType := reqPtrType.Elem().(*types.Named)
+		respType := respPtrType.Elem().(*types.Named)
 
 		file.Func().
 			Params(jen.Id(receiver).Id(receiverTyp)).
 			Id(method.Name()).
 			Params(
 				jen.Id("ctx").Qual("context", "Context"),
-				jen.Id("req").Qual(reqType.Obj().Pkg().Path(), reqType.Obj().Name())).
+				jen.Id("req").Op("*").Qual(reqType.Obj().Pkg().Path(), reqType.Obj().Name())).
 			Params(
-				jen.Qual(respType.Obj().Pkg().Path(), respType.Obj().Name()),
+				jen.Op("*").Qual(respType.Obj().Pkg().Path(), respType.Obj().Name()),
 				jen.Error()).
 			BlockFunc(func(g *jen.Group) {
 				g.List(jen.Id("resp"), jen.Err()).
@@ -68,10 +71,13 @@ func generateEndpointSet(file *jen.File, svc *types.Named) {
 					Id(receiver).Dot(endpointFunc).Call(jen.Id("ctx"), jen.Id("req")).
 					Line()
 				// if err != nil { return RESP{}, err }
-				g.If(jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Qual(respType.Obj().Pkg().Path(), respType.Obj().Name()).Values(), jen.Err()))
+				g.If(jen.Err().Op("!=").Nil()).Block(
+					jen.Return(
+						jen.Op("&").Qual(respType.Obj().Pkg().Path(), respType.Obj().Name()).Values(),
+						jen.Err()))
 				// return resp.(RESP), nil
 				g.Return(
-					jen.Id("resp").Assert(jen.Qual(respType.Obj().Pkg().Path(), respType.Obj().Name())),
+					jen.Id("resp").Assert(jen.Op("*").Qual(respType.Obj().Pkg().Path(), respType.Obj().Name())),
 					jen.Nil())
 			}).Line()
 	}
@@ -82,8 +88,8 @@ func generateEndpointSet(file *jen.File, svc *types.Named) {
 		Id("EndpointSet").
 		BlockFunc(func(g *jen.Group) {
 			g.Return(jen.Id("EndpointSet").Values(jen.DictFunc(func(d jen.Dict) {
-				for i := 0; i < iface.NumMethods(); i++ {
-					method := iface.Method(i)
+				for i := 0; i < interfaceType.NumMethods(); i++ {
+					method := interfaceType.Method(i)
 					if !method.Exported() {
 						continue
 					}
@@ -105,8 +111,8 @@ func generateEndpointSet(file *jen.File, svc *types.Named) {
 		BlockFunc(func(g *jen.Group) {
 			g.ReturnFunc(func(g *jen.Group) {
 				g.Id("EndpointSet").Values(jen.DictFunc(func(d jen.Dict) {
-					for i := 0; i < iface.NumMethods(); i++ {
-						method := iface.Method(i)
+					for i := 0; i < interfaceType.NumMethods(); i++ {
+						method := interfaceType.Method(i)
 						if !method.Exported() {
 							continue
 						}
@@ -125,31 +131,31 @@ func generateEndpointSet(file *jen.File, svc *types.Named) {
 // GenerateEndpoints generates endpoint factory for a given service
 func GenerateEndpoints(f *jen.File, svc *types.Named) error {
 	var (
-		iface *types.Interface
-		ok    bool
+		interfaceType *types.Interface
+		ok            bool
 	)
 
 	// Get the underlying interface of the named type
 	underlying := svc.Underlying()
 
 	// Check if the underlying type is an interface
-	if iface, ok = underlying.(*types.Interface); !ok {
+	if interfaceType, ok = underlying.(*types.Interface); !ok {
 		// If the underlying type is not an interface, return an error
 		return errors.Errorf("%s is not an interface", svc.Obj().Name())
 	}
 
-	for i := 0; i < iface.NumMethods(); i++ {
-		method := iface.Method(i)
+	for i := 0; i < interfaceType.NumMethods(); i++ {
+		method := interfaceType.Method(i)
 		if !method.Exported() {
 			continue
 		}
 		signature := method.Type().(*types.Signature)
 
-		if err := checkParams(signature.Params()); err != nil {
+		if err := utils.CheckParams(signature.Params()); err != nil {
 			return errors.Annotatef(err, "check method signature: %s", method.FullName())
 		}
 
-		if err := checkResults(signature.Results()); err != nil {
+		if err := utils.CheckResults(signature.Results()); err != nil {
 			return errors.Annotatef(err, "check method signature: %s", method.FullName())
 		}
 	}

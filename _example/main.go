@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 
+	"example/api/order"
 	order1 "example/internal/order"
-	"example/pkg/order"
 
 	_ "github.com/uber/jaeger-client-go"
 	"go.opentelemetry.io/otel"
@@ -92,7 +92,7 @@ func main() {
 		khttp.SetClient(&http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}))
 	go func() {
 		time.Sleep(5 * time.Second)
-		_, err := clientSet.EndpointSet().CreateOrder(context.Background(), order.CreateOrderRequest{})
+		_, err := clientSet.EndpointSet().CreateOrder(context.Background(), &order.CreateOrderRequest{})
 		if err != nil {
 			stdlog.Printf("create order failed, error %+v", err)
 		}

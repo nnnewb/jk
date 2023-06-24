@@ -7,11 +7,11 @@ import (
 //go:generate jk generate all -t OrderService --api-version v2
 type OrderService interface {
 	// CreateOrder 创建订单
-	CreateOrder(ctx context.Context, req CreateOrderRequest) (CreateOrderResponse, error)
+	CreateOrder(ctx context.Context, req *CreateOrderRequest) (*CreateOrderResponse, error)
 	// CancelOrder 取消订单
-	CancelOrder(ctx context.Context, req CancelOrderRequest) (CancelOrderResponse, error)
+	CancelOrder(ctx context.Context, req *CancelOrderRequest) (*CancelOrderResponse, error)
 	// GetOrderDetail 获取订单详情
-	GetOrderDetail(ctx context.Context, req GetOrderDetailRequest) (GetOrderDetailResponse, error)
+	GetOrderDetail(ctx context.Context, req *GetOrderDetailRequest) (*GetOrderDetailResponse, error)
 }
 
 // CreateOrderRequest 创建订单请求结构体

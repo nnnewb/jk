@@ -20,31 +20,31 @@ type EndpointSet struct {
 	GetOrderDetailEndpoint endpoint.Endpoint
 }
 
-func (o EndpointSet) CancelOrder(ctx context.Context, req CancelOrderRequest) (CancelOrderResponse, error) {
+func (o EndpointSet) CancelOrder(ctx context.Context, req *CancelOrderRequest) (*CancelOrderResponse, error) {
 	resp, err := o.CancelOrderEndpoint(ctx, req)
 
 	if err != nil {
-		return CancelOrderResponse{}, err
+		return &CancelOrderResponse{}, err
 	}
-	return resp.(CancelOrderResponse), nil
+	return resp.(*CancelOrderResponse), nil
 }
 
-func (o EndpointSet) CreateOrder(ctx context.Context, req CreateOrderRequest) (CreateOrderResponse, error) {
+func (o EndpointSet) CreateOrder(ctx context.Context, req *CreateOrderRequest) (*CreateOrderResponse, error) {
 	resp, err := o.CreateOrderEndpoint(ctx, req)
 
 	if err != nil {
-		return CreateOrderResponse{}, err
+		return &CreateOrderResponse{}, err
 	}
-	return resp.(CreateOrderResponse), nil
+	return resp.(*CreateOrderResponse), nil
 }
 
-func (o EndpointSet) GetOrderDetail(ctx context.Context, req GetOrderDetailRequest) (GetOrderDetailResponse, error) {
+func (o EndpointSet) GetOrderDetail(ctx context.Context, req *GetOrderDetailRequest) (*GetOrderDetailResponse, error) {
 	resp, err := o.GetOrderDetailEndpoint(ctx, req)
 
 	if err != nil {
-		return GetOrderDetailResponse{}, err
+		return &GetOrderDetailResponse{}, err
 	}
-	return resp.(GetOrderDetailResponse), nil
+	return resp.(*GetOrderDetailResponse), nil
 }
 
 func NewEndpointSet(svc OrderService) EndpointSet {

@@ -60,13 +60,13 @@ func GenerateSwagger(wr io.Writer, svc *types.Named, apiVer, Ver string) error {
 func generatePaths(svc *types.Named) *spec.Paths {
 	ret := &spec.Paths{}
 	ret.Paths = map[string]spec.PathItem{}
-	iface, ok := svc.Underlying().(*types.Interface)
+	interfaceType, ok := svc.Underlying().(*types.Interface)
 	if !ok {
 		panic(errors.Errorf("svc %s underlying type is not interface", svc.Obj().Name()))
 	}
 
-	for i := 0; i < iface.NumMethods(); i++ {
-		method := iface.Method(i)
+	for i := 0; i < interfaceType.NumMethods(); i++ {
+		method := interfaceType.Method(i)
 		if !method.Exported() {
 			continue
 		}

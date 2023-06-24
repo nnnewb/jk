@@ -20,7 +20,7 @@ func httpJSONRequestDecoder[T any](ctx context.Context, req *http.Request) (any,
 	if err != nil {
 		return nil, err
 	}
-	return request, nil
+	return &request, nil
 }
 
 func httpJSONResponseDecoder[T any](ctx context.Context, resp *http.Response) (any, error) {
@@ -30,7 +30,7 @@ func httpJSONResponseDecoder[T any](ctx context.Context, resp *http.Response) (a
 	if err != nil {
 		return nil, err
 	}
-	return response, nil
+	return &response, nil
 }
 
 //go:embed swagger.json

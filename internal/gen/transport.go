@@ -9,10 +9,10 @@ import (
 )
 
 func generateClientSet(f *jen.File, svc *types.Named, apiVer string) {
-	iface := svc.Underlying().(*types.Interface)
+	interfaceType := svc.Underlying().(*types.Interface)
 	f.Type().Id("HTTPClientSet").StructFunc(func(g *jen.Group) {
-		for i := 0; i < iface.NumMethods(); i++ {
-			method := iface.Method(i)
+		for i := 0; i < interfaceType.NumMethods(); i++ {
+			method := interfaceType.Method(i)
 			if !method.Exported() {
 				continue
 			}
@@ -33,13 +33,14 @@ func generateClientSet(f *jen.File, svc *types.Named, apiVer string) {
 		BlockFunc(func(g *jen.Group) {
 			// return HTTPClientSet{
 			g.Return(jen.Id("HTTPClientSet")).Values(jen.DictFunc(func(d jen.Dict) {
-				for i := 0; i < iface.NumMethods(); i++ {
-					method := iface.Method(i)
+				for i := 0; i < interfaceType.NumMethods(); i++ {
+					method := interfaceType.Method(i)
 					if !method.Exported() {
 						continue
 					}
 					signature := method.Type().(*types.Signature)
-					respType := signature.Results().At(0).Type().(*types.Named)
+					respPtrType := signature.Results().At(0).Type().(*types.Pointer)
+					respType := respPtrType.Elem().(*types.Named)
 
 					// XXXClient: http.NewClient(
 					//   http.MethodPost,
@@ -86,9 +87,9 @@ func generateClientSet(f *jen.File, svc *types.Named, apiVer string) {
 		BlockFunc(func(g *jen.Group) {
 			// return EndpointSet{
 			g.Return(jen.Id("EndpointSet").Values(jen.DictFunc(func(d jen.Dict) {
-				for i := 0; i < iface.NumMethods(); i++ {
+				for i := 0; i < interfaceType.NumMethods(); i++ {
 					// XXXEndpoint: s.XXXClient.Endpoint(),
-					method := iface.Method(i)
+					method := interfaceType.Method(i)
 					if !method.Exported() {
 						continue
 					}
@@ -103,13 +104,13 @@ func generateClientSet(f *jen.File, svc *types.Named, apiVer string) {
 }
 
 func generateServerSet(f *jen.File, svc *types.Named, apiVer string) {
-	iface := svc.Underlying().(*types.Interface)
+	interfaceType := svc.Underlying().(*types.Interface)
 	svcName := svc.Obj().Name()
 
 	// type HTTPServerSet {
 	f.Type().Id("HTTPServerSet").StructFunc(func(g *jen.Group) {
-		for i := 0; i < iface.NumMethods(); i++ {
-			method := iface.Method(i)
+		for i := 0; i < interfaceType.NumMethods(); i++ {
+			method := interfaceType.Method(i)
 			if !method.Exported() {
 				continue
 			}
@@ -129,13 +130,14 @@ func generateServerSet(f *jen.File, svc *types.Named, apiVer string) {
 		BlockFunc(func(g *jen.Group) {
 			// return HTTPServerSet{
 			g.Return(jen.Id("HTTPServerSet").Values(jen.DictFunc(func(d jen.Dict) {
-				for i := 0; i < iface.NumMethods(); i++ {
-					method := iface.Method(i)
+				for i := 0; i < interfaceType.NumMethods(); i++ {
+					method := interfaceType.Method(i)
 					if !method.Exported() {
 						continue
 					}
 					signature := method.Type().(*types.Signature)
-					reqType := signature.Params().At(1).Type().(*types.Named)
+					reqPtrType := signature.Params().At(1).Type().(*types.Pointer)
+					reqType := reqPtrType.Elem().(*types.Named)
 
 					// XXXServer: khttp.NewServer(
 					//   endpointSet.XXXEndpoint,
@@ -185,8 +187,8 @@ func generateServerSet(f *jen.File, svc *types.Named, apiVer string) {
 			)
 
 			// TODO: 需要支持可选的 API 路径配置
-			for i := 0; i < iface.NumMethods(); i++ {
-				method := iface.Method(i)
+			for i := 0; i < interfaceType.NumMethods(); i++ {
+				method := interfaceType.Method(i)
 				if !method.Exported() {
 					continue
 				}
@@ -225,7 +227,7 @@ func generateHTTPJSONRequestDecoder(f *jen.File) {
 			// if err != nil { return nil, err }
 			g.If(jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Nil(), jen.Err()))
 			// return request,nil
-			g.Return(jen.Id("request"), jen.Nil())
+			g.Return(jen.Op("&").Id("request"), jen.Nil())
 		}).Line()
 }
 
@@ -251,7 +253,7 @@ func generateHTTPJSONResponseDecoder(f *jen.File) {
 			// if err != nil { return nil, err }
 			g.If(jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Nil(), jen.Err()))
 			// return response, nil
-			g.Return(jen.Id("response"), jen.Nil())
+			g.Return(jen.Op("&").Id("response"), jen.Nil())
 		}).Line()
 }
 
