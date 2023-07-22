@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"go/types"
 	"io"
-	"net/http"
-	"path"
 	"reflect"
 	"strings"
 
@@ -15,37 +13,6 @@ import (
 	"github.com/nnnewb/jk/internal/domain"
 	"github.com/nnnewb/jk/internal/utils"
 )
-
-func httpPopulateDefaultAnnotations(service *domain.Service) {
-	if service.Annotations.SwaggerInfoAPIVersion == "" {
-		service.Annotations.SwaggerInfoAPIVersion = "v0.1.0"
-	}
-
-	if service.Annotations.SwaggerInfoAPITitle == "" {
-		service.Annotations.SwaggerInfoAPITitle = service.Interface.Obj().Name()
-	}
-
-	if service.Annotations.HTTPBasePath == "" {
-		service.Annotations.HTTPBasePath = fmt.Sprintf("/api/v1/%s/", strcase.ToKebab(service.Interface.Obj().Name()))
-	}
-
-	for _, method := range service.Methods {
-		if !method.Func.Exported() {
-			continue
-		}
-
-		method.Annotations.HTTPMethod = strings.ToUpper(method.Annotations.HTTPMethod)
-		switch method.Annotations.HTTPMethod {
-		case http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodPost:
-		default:
-			method.Annotations.HTTPMethod = http.MethodPost
-		}
-
-		if method.Annotations.HTTPPath == "" {
-			method.Annotations.HTTPPath = path.Join(service.Annotations.HTTPBasePath, strcase.ToKebab(method.Func.Name()))
-		}
-	}
-}
 
 func GenerateSwagger(wr io.Writer, service *domain.Service) error {
 	httpPopulateDefaultAnnotations(service)
@@ -98,7 +65,6 @@ func generatePaths(service *domain.Service) (*spec.Paths, error) {
 		item := spec.PathItem{}
 		operation := spec.
 			NewOperation(strcase.ToKebab(method.Func.Name())).
-			WithConsumes("application/json").
 			WithProduces("application/json").
 			WithDefaultResponse(generateResponse(method.Func)).
 			WithTags(service.Interface.Obj().Name())
@@ -114,16 +80,19 @@ func generatePaths(service *domain.Service) (*spec.Paths, error) {
 			item.Delete.Parameters = append(item.Delete.Parameters, parameters...)
 		case "put":
 			parameters := generatePostParameters(method.Func)
+			operation.WithConsumes("application/json")
 			item.Put = operation
 			item.Put.Parameters = append(item.Put.Parameters, parameters...)
 		case "patch":
 			parameters := generatePostParameters(method.Func)
+			operation.WithConsumes("application/json")
 			item.Patch = operation
 			item.Patch.Parameters = append(item.Patch.Parameters, parameters...)
 		case "post":
 			fallthrough
 		default:
 			parameters := generatePostParameters(method.Func)
+			operation.WithConsumes("application/json")
 			item.Post = operation
 			item.Post.Parameters = append(item.Post.Parameters, parameters...)
 		}
@@ -169,7 +138,22 @@ func generateQueryParameters(fun *types.Func) []spec.Parameter {
 		}
 
 		param := spec.QueryParam(jsonName)
-		param.Schema = generateSchemaFromType(f.Type())
+		switch ft := f.Type().(type) {
+		case *types.Basic:
+			switch ft.Kind() {
+			case types.Int, types.Int8, types.Int16, types.Int32, types.Int64,
+				types.Uint, types.Uint8, types.Uint16, types.Uint32, types.Uint64:
+				param.Type = "integer"
+			case types.Float32, types.Float64:
+				param.Type = "number"
+			case types.String:
+				param.Type = "string"
+			case types.Bool:
+				param.Type = "boolean"
+			default:
+				panic(errors.Errorf("unserializable basic type %v", ft.Kind()))
+			}
+		}
 		params = append(params, *param)
 	}
 
