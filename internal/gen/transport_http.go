@@ -12,7 +12,7 @@ import (
 	"github.com/nnnewb/jk/internal/domain"
 )
 
-func generateClientSet(f *jen.File, service *domain.Service, apiVer string) {
+func generateClientSet(f *jen.File, service *domain.Service) {
 	httpPopulateDefaultAnnotations(service)
 	interfaceType := service.Interface.Underlying().(*types.Interface)
 
@@ -125,7 +125,7 @@ func generateClientSet(f *jen.File, service *domain.Service, apiVer string) {
 		}).Line()
 }
 
-func generateServerSet(f *jen.File, service *domain.Service, apiVer string) {
+func generateServerSet(f *jen.File, service *domain.Service) {
 	httpPopulateDefaultAnnotations(service)
 	interfaceType := service.Interface.Underlying().(*types.Interface)
 	svcName := service.Interface.Obj().Name()
@@ -406,13 +406,13 @@ func generateEmbedSwaggerJSON(f *jen.File) {
 	f.Var().Id("swagger").Qual("embed", "FS")
 }
 
-func GenerateHTTPTransport(f *jen.File, svc *domain.Service, ver string) {
+func GenerateHTTPTransport(f *jen.File, svc *domain.Service) {
 	generateBeautifyErrorEncoder(f)
 	generateHTTPJSONRequestDecoder(f)
 	generateHTTPJSONResponseDecoder(f)
 	generateHTTPQueryStringEncoder(f)
 	generateHTTPQueryStringRequestDecoder(f)
 	generateEmbedSwaggerJSON(f)
-	generateClientSet(f, svc, ver)
-	generateServerSet(f, svc, ver)
+	generateClientSet(f, svc)
+	generateServerSet(f, svc)
 }
