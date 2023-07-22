@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/go-kit/kit v0.12.0
+	github.com/gorilla/schema v1.2.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/nnnewb/otelkit v0.1.0
 	github.com/swaggo/http-swagger/v2 v2.0.1

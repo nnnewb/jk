@@ -15,9 +15,10 @@ func makeEndpointFromFunc[REQ, RESP any](f func(context.Context, REQ) (RESP, err
 }
 
 type EndpointSet struct {
-	CancelOrderEndpoint    endpoint.Endpoint
-	CreateOrderEndpoint    endpoint.Endpoint
-	GetOrderDetailEndpoint endpoint.Endpoint
+	CancelOrderEndpoint endpoint.Endpoint
+	CreateOrderEndpoint endpoint.Endpoint
+	OrderDetailEndpoint endpoint.Endpoint
+	UpdateEndpoint      endpoint.Endpoint
 }
 
 func (o EndpointSet) CancelOrder(ctx context.Context, req *CancelOrderRequest) (*CancelOrderResponse, error) {
@@ -38,8 +39,8 @@ func (o EndpointSet) CreateOrder(ctx context.Context, req *CreateOrderRequest) (
 	return resp.(*CreateOrderResponse), nil
 }
 
-func (o EndpointSet) GetOrderDetail(ctx context.Context, req *GetOrderDetailRequest) (*GetOrderDetailResponse, error) {
-	resp, err := o.GetOrderDetailEndpoint(ctx, req)
+func (o EndpointSet) OrderDetail(ctx context.Context, req *GetOrderDetailRequest) (*GetOrderDetailResponse, error) {
+	resp, err := o.OrderDetailEndpoint(ctx, req)
 
 	if err != nil {
 		return &GetOrderDetailResponse{}, err
@@ -47,18 +48,29 @@ func (o EndpointSet) GetOrderDetail(ctx context.Context, req *GetOrderDetailRequ
 	return resp.(*GetOrderDetailResponse), nil
 }
 
+func (o EndpointSet) Update(ctx context.Context, req *UpdateOrderRequest) (*UpdateOrderResponse, error) {
+	resp, err := o.UpdateEndpoint(ctx, req)
+
+	if err != nil {
+		return &UpdateOrderResponse{}, err
+	}
+	return resp.(*UpdateOrderResponse), nil
+}
+
 func NewEndpointSet(svc OrderService) EndpointSet {
 	return EndpointSet{
-		CancelOrderEndpoint:    makeEndpointFromFunc(svc.CancelOrder),
-		CreateOrderEndpoint:    makeEndpointFromFunc(svc.CreateOrder),
-		GetOrderDetailEndpoint: makeEndpointFromFunc(svc.GetOrderDetail),
+		CancelOrderEndpoint: makeEndpointFromFunc(svc.CancelOrder),
+		CreateOrderEndpoint: makeEndpointFromFunc(svc.CreateOrder),
+		OrderDetailEndpoint: makeEndpointFromFunc(svc.OrderDetail),
+		UpdateEndpoint:      makeEndpointFromFunc(svc.Update),
 	}
 }
 
 func (s EndpointSet) With(outer endpoint.Middleware, others ...endpoint.Middleware) EndpointSet {
 	return EndpointSet{
-		CancelOrderEndpoint:    endpoint.Chain(outer, others...)(s.CancelOrderEndpoint),
-		CreateOrderEndpoint:    endpoint.Chain(outer, others...)(s.CreateOrderEndpoint),
-		GetOrderDetailEndpoint: endpoint.Chain(outer, others...)(s.GetOrderDetailEndpoint),
+		CancelOrderEndpoint: endpoint.Chain(outer, others...)(s.CancelOrderEndpoint),
+		CreateOrderEndpoint: endpoint.Chain(outer, others...)(s.CreateOrderEndpoint),
+		OrderDetailEndpoint: endpoint.Chain(outer, others...)(s.OrderDetailEndpoint),
+		UpdateEndpoint:      endpoint.Chain(outer, others...)(s.UpdateEndpoint),
 	}
 }

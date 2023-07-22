@@ -6,8 +6,8 @@ import (
 
 // Shuffle randomly shuffles the elements of the slice and returns the shuffled slice.
 // This implementation creates a new slice to avoid modifying the original slice.
-func (s Slice[T]) Shuffle() Slice[T] {
-	shuffled := make(Slice[T], len(s))
+func Shuffle[T any](s []T) []T {
+	shuffled := make([]T, len(s))
 	copy(shuffled, s)
 	for i := len(shuffled) - 1; i > 0; i-- {
 		j := rand.Intn(i + 1)

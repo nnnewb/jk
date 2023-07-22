@@ -3,10 +3,14 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	stdlog "log"
+	"log"
 	"net/http"
+	"os"
 	"time"
 
+	klog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
+	ktransport "github.com/go-kit/kit/transport"
 	khttp "github.com/go-kit/kit/transport/http"
 	"github.com/nnnewb/otelkit"
 	"go.opentelemetry.io/otel/propagation"
@@ -42,10 +46,10 @@ func tracerProvider(url string) (*tracesdk.TracerProvider, error) {
 }
 
 func main() {
-	stdlog.SetFlags(stdlog.LstdFlags | stdlog.Lshortfile)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	tp, err := tracerProvider("http://192.168.56.4:14268/api/traces")
 	if err != nil {
-		stdlog.Fatal(err)
+		log.Fatal(err)
 	}
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
@@ -59,7 +63,7 @@ func main() {
 		ctx, cancel = context.WithTimeout(ctx, time.Second*5)
 		defer cancel()
 		if err := tp.Shutdown(ctx); err != nil {
-			stdlog.Fatal(err)
+			log.Fatal(err)
 		}
 	}(ctx)
 
@@ -75,9 +79,15 @@ func main() {
 	//     -nodes \
 	//     -subj "/C=XX/ST=StateName/L=CityName/O=CompanyName/OU=CompanySectionName/CN=CommonNameOrHostname"
 
+	errorLogger := klog.NewLogfmtLogger(os.Stdout)
+	errorLogger = klog.With(errorLogger, "caller", klog.DefaultCaller, "timestamp", klog.DefaultTimestamp)
+	errorLogger = level.NewFilter(errorLogger, level.AllowDebug())
+	errorLogger = level.NewInjector(errorLogger, level.ErrorValue())
+
 	endpointSet := order.NewEndpointSet(&order1.OrderSvc{})
 	serverSet := order.NewHTTPServerSet(
 		endpointSet,
+		khttp.ServerErrorHandler(ktransport.NewLogErrorHandler(errorLogger)),
 		otelkit.OpenTelemetryTraceServer(),
 		otelkit.OpenTelemetryTraceServerResp(),
 		otelkit.OpenTelemetryTraceServerEnd())
@@ -94,13 +104,13 @@ func main() {
 		time.Sleep(5 * time.Second)
 		_, err := clientSet.EndpointSet().CreateOrder(context.Background(), &order.CreateOrderRequest{})
 		if err != nil {
-			stdlog.Printf("create order failed, error %+v", err)
+			log.Printf("create order failed, error %+v", err)
 		}
 	}()
 
-	stdlog.Println("Server now listening at https://127.0.0.1:8888/")
+	log.Println("Server now listening at https://127.0.0.1:8888/")
 	err = http.ListenAndServeTLS("127.0.0.1:8888", "cert.pem", "key.pem", serverSet.Handler())
 	if err != nil {
-		stdlog.Fatalf("Serve failed, error %+v", err)
+		log.Fatalf("Serve failed, error %+v", err)
 	}
 }

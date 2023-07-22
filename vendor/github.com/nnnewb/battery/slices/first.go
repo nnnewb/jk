@@ -1,13 +1,14 @@
 package slices
 
-// First returns the first element in the slice that satisfies the given predicate function.
+// First returns the index of first element in the slice that satisfies the
+// given predicate function.
+//
 // If no element satisfies the predicate, the second return value is false.
-func (s Slice[T]) First(predicate func(T) bool) (T, bool) {
-	var zeroValT T
-	for _, elem := range s {
+func First[T any](s []T, predicate func(T) bool) (int, bool) {
+	for idx, elem := range s {
 		if predicate(elem) {
-			return elem, true
+			return idx, true
 		}
 	}
-	return zeroValT, false
+	return 0, false
 }

@@ -2,6 +2,17 @@ package utils
 
 import "go/types"
 
+func IsQueryStringSerializable(t types.Type) bool {
+	switch typ := t.(type) {
+	case *types.Basic:
+		return isBasicSerializableType(t)
+	case *types.Pointer:
+		return IsQueryStringSerializable(typ.Elem())
+	default:
+		return false
+	}
+}
+
 // IsSerializable check is given type serializable
 func IsSerializable(t types.Type) bool {
 	switch t.(type) {

@@ -4,15 +4,57 @@ import (
 	"fmt"
 	"go/types"
 	"io"
+	"net/http"
+	"path"
 	"reflect"
 	"strings"
 
+	"emperror.dev/errors"
 	"github.com/go-openapi/spec"
 	"github.com/iancoleman/strcase"
-	"github.com/juju/errors"
+	"github.com/nnnewb/jk/internal/domain"
+	"github.com/nnnewb/jk/internal/utils"
 )
 
-func GenerateSwagger(wr io.Writer, svc *types.Named, apiVer, Ver string) error {
+func httpPopulateDefaultAnnotations(service *domain.Service) {
+	if service.Annotations.SwaggerInfoAPIVersion == "" {
+		service.Annotations.SwaggerInfoAPIVersion = "v0.1.0"
+	}
+
+	if service.Annotations.SwaggerInfoAPITitle == "" {
+		service.Annotations.SwaggerInfoAPITitle = service.Interface.Obj().Name()
+	}
+
+	if service.Annotations.HTTPBasePath == "" {
+		service.Annotations.HTTPBasePath = fmt.Sprintf("/api/v1/%s/", strcase.ToKebab(service.Interface.Obj().Name()))
+	}
+
+	for _, method := range service.Methods {
+		if !method.Func.Exported() {
+			continue
+		}
+
+		method.Annotations.HTTPMethod = strings.ToUpper(method.Annotations.HTTPMethod)
+		switch method.Annotations.HTTPMethod {
+		case http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodPost:
+		default:
+			method.Annotations.HTTPMethod = http.MethodPost
+		}
+
+		if method.Annotations.HTTPPath == "" {
+			method.Annotations.HTTPPath = path.Join(service.Annotations.HTTPBasePath, strcase.ToKebab(method.Func.Name()))
+		}
+	}
+}
+
+func GenerateSwagger(wr io.Writer, service *domain.Service) error {
+	httpPopulateDefaultAnnotations(service)
+
+	paths, err := generatePaths(service)
+	if err != nil {
+		return err
+	}
+
 	root := spec.Swagger{
 		SwaggerProps: spec.SwaggerProps{
 			Swagger:  "2.0",
@@ -20,71 +62,121 @@ func GenerateSwagger(wr io.Writer, svc *types.Named, apiVer, Ver string) error {
 			Produces: []string{"application/json"},
 			Schemes:  []string{"http", "https"},
 			Host:     "localhost",
-			BasePath: fmt.Sprintf("/api/%s/%s", apiVer, svc.Obj().Name()),
+			BasePath: service.Annotations.HTTPBasePath,
 			Info: &spec.Info{
 				InfoProps: spec.InfoProps{
-					Title:   svc.Obj().Name(), // TODO
-					Version: Ver,              // TODO
+					Title:   service.Annotations.SwaggerInfoAPITitle,
+					Version: service.Annotations.SwaggerInfoAPIVersion,
 				},
 			},
-			Paths: generatePaths(svc),
-			SecurityDefinitions: spec.SecurityDefinitions{
-				"api_key": {
-					SecuritySchemeProps: spec.SecuritySchemeProps{
-						Description: "simple api key",
-						Type:        "apiKey",
-						Name:        "X-Authentication",
-						In:          "header",
-					},
-				},
-			},
-			Tags: []spec.Tag{
-				spec.NewTag(svc.Obj().Name(), "", nil),
-			},
+			Paths: paths,
 		},
 	}
 
 	result, err := root.MarshalJSON()
 	if err != nil {
-		return errors.Trace(err)
+		return errors.WithStack(err)
 	}
 
 	_, err = wr.Write(result)
 	if err != nil {
-		return errors.Trace(err)
+		return errors.WithStack(err)
 	}
 
 	return nil
 }
 
-func generatePaths(svc *types.Named) *spec.Paths {
+func generatePaths(service *domain.Service) (*spec.Paths, error) {
 	ret := &spec.Paths{}
 	ret.Paths = map[string]spec.PathItem{}
-	interfaceType, ok := svc.Underlying().(*types.Interface)
-	if !ok {
-		panic(errors.Errorf("svc %s underlying type is not interface", svc.Obj().Name()))
-	}
 
-	for i := 0; i < interfaceType.NumMethods(); i++ {
-		method := interfaceType.Method(i)
-		if !method.Exported() {
+	for _, method := range service.Methods {
+		if !method.Func.Exported() {
 			continue
 		}
 
 		item := spec.PathItem{}
-		item.Post = spec.
-			NewOperation(strcase.ToKebab(method.Name())).
+		operation := spec.
+			NewOperation(strcase.ToKebab(method.Func.Name())).
 			WithConsumes("application/json").
 			WithProduces("application/json").
-			WithDefaultResponse(generateResponse(method)).
-			WithTags(svc.Obj().Name())
-		item.Post.Parameters = append(item.Post.Parameters, generateParameters(method)...)
-		ret.Paths["/"+strcase.ToKebab(method.Name())] = item
+			WithDefaultResponse(generateResponse(method.Func)).
+			WithTags(service.Interface.Obj().Name())
+
+		switch strings.ToLower(method.Annotations.HTTPMethod) {
+		case "get":
+			parameters := generateQueryParameters(method.Func)
+			item.Get = operation
+			item.Get.Parameters = append(item.Get.Parameters, parameters...)
+		case "delete":
+			parameters := generateQueryParameters(method.Func)
+			item.Delete = operation
+			item.Delete.Parameters = append(item.Delete.Parameters, parameters...)
+		case "put":
+			parameters := generatePostParameters(method.Func)
+			item.Put = operation
+			item.Put.Parameters = append(item.Put.Parameters, parameters...)
+		case "patch":
+			parameters := generatePostParameters(method.Func)
+			item.Patch = operation
+			item.Patch.Parameters = append(item.Patch.Parameters, parameters...)
+		case "post":
+			fallthrough
+		default:
+			parameters := generatePostParameters(method.Func)
+			item.Post = operation
+			item.Post.Parameters = append(item.Post.Parameters, parameters...)
+		}
+
+		ret.Paths[method.Annotations.HTTPPath] = item
 	}
-	return ret
+
+	return ret, nil
 }
 
-func generateParameters(fun *types.Func) []spec.Parameter {
+func generateQueryParameters(fun *types.Func) []spec.Parameter {
+	signature := fun.Type().(*types.Signature)
+	paramType := signature.Params().At(1).Type()
+
+	var structType *types.Struct
+
+	ptr := paramType.(*types.Pointer)
+	if named, ok := ptr.Elem().(*types.Named); ok {
+		structType = named.Underlying().(*types.Struct)
+	} else {
+		structType = ptr.Elem().(*types.Struct)
+	}
+
+	params := make([]spec.Parameter, 0, structType.NumFields())
+	for i := 0; i < structType.NumFields(); i++ {
+		f := structType.Field(i)
+		if !f.Exported() {
+			continue
+		}
+
+		if !utils.IsQueryStringSerializable(f.Type()) {
+			panic(fmt.Errorf("unserializable query string parameter type %s", f.Type()))
+		}
+
+		var (
+			jsonName string
+			ok       bool
+		)
+		if jsonName, ok = getJsonName(structType.Tag(i)); !ok {
+			jsonName = f.Name()
+		} else if jsonName == "-" {
+			continue
+		}
+
+		param := spec.QueryParam(jsonName)
+		param.Schema = generateSchemaFromType(f.Type())
+		params = append(params, *param)
+	}
+
+	return params
+}
+
+func generatePostParameters(fun *types.Func) []spec.Parameter {
 	signature := fun.Type().(*types.Signature)
 	reqType := signature.Params().At(1)
 	param := spec.Parameter{}
@@ -138,21 +230,14 @@ func generateSchemaFromType(typ types.Type) *spec.Schema {
 				continue
 			}
 
-			jsonTag := reflect.StructTag(t.Tag(i)).Get("json")
-			if jsonTag == "-" {
-				continue
-			}
-
-			var jsonName string
-			for _, v := range strings.Split(jsonTag, ",") {
-				if v != "omitempty" && strings.TrimSpace(v) != "" {
-					jsonName = v
-					break
-				}
-			}
-
-			if jsonName == "" {
+			var (
+				jsonName string
+				ok       bool
+			)
+			if jsonName, ok = getJsonName(t.Tag(i)); !ok {
 				jsonName = field.Name()
+			} else if jsonName == "-" {
+				continue
 			}
 
 			// Check if the field is exported
@@ -164,4 +249,25 @@ func generateSchemaFromType(typ types.Type) *spec.Schema {
 	default:
 		panic(errors.Errorf("unserializable type %v", typ))
 	}
+}
+
+func getJsonName(tag string) (string, bool) {
+	jsonTag := reflect.StructTag(tag).Get("json")
+	if jsonTag == "-" {
+		return "", false
+	}
+
+	var jsonName string
+	for _, v := range strings.Split(jsonTag, ",") {
+		if v != "omitempty" && strings.TrimSpace(v) != "" {
+			jsonName = v
+			break
+		}
+	}
+
+	if jsonName == "" {
+		return "", false
+	}
+
+	return jsonName, true
 }

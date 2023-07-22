@@ -16,6 +16,7 @@ func InitializeFileCommon(f *jen.File) {
 	f.ImportName("github.com/juju/errors", "errors")
 	f.ImportName("github.com/go-kit/kit/endpoint", "endpoint")
 	f.ImportAlias("github.com/go-kit/kit/transport/http", "khttp")
+	f.ImportAlias("github.com/gorilla/schema", "schema")
 }
 
 // CheckParams checks if the function signature meets the following requirements:
@@ -137,7 +138,7 @@ func checkCodeField(named *types.Named) error {
 			}
 			fieldTag := p.Tag(i)
 			jsonTag := reflect.StructTag(fieldTag).Get("json")
-			jsonTags := slices.Slice[string](strings.Split(jsonTag, ","))
+			jsonTags := strings.Split(jsonTag, ",")
 			if len(jsonTags) == 0 {
 				return errors.Errorf("the Code field has no \"json\" tag, please add the `json:\"code\"` tag to the Code field")
 			}
@@ -146,7 +147,7 @@ func checkCodeField(named *types.Named) error {
 				return errors.Errorf("the first word before the comma in the \"json\" tag of the Code field must be \"code\", to ensure consistency of the response structure")
 			}
 			// The code field cannot have omitempty and string tags, to ensure that the serialized result must exist and be of the JSON Number type
-			if jsonTags.Any(func(v string) bool { return v == "omitempty" || v == "string" }) {
+			if slices.Any(jsonTags, func(v string) bool { return v == "omitempty" || v == "string" }) {
 				return errors.Errorf("the \"json\" tag of the Code field cannot contain \"omitempty\" and \"string\", to ensure that this field always appears and has the correct type")
 			}
 			return nil
@@ -175,7 +176,7 @@ func checkMessageField(named *types.Named) error {
 			}
 			fieldTag := p.Tag(i)
 			jsonTag := reflect.StructTag(fieldTag).Get("json")
-			jsonTags := slices.Slice[string](strings.Split(jsonTag, ","))
+			jsonTags := strings.Split(jsonTag, ",")
 			if len(jsonTags) == 0 {
 				return errors.Errorf("the Message field has no \"json\" tag, please add the `json:\"message\"` tag to the Message field")
 			}
@@ -184,7 +185,7 @@ func checkMessageField(named *types.Named) error {
 				return errors.Errorf("the first word before the comma in the \"json\" tag of the Message field must be \"message\", to ensure consistency of the response structure")
 			}
 			// The message field cannot have omitempty tag, to ensure that this field always appears
-			if jsonTags.Any(func(v string) bool { return v == "omitempty" }) {
+			if slices.Any(jsonTags, func(v string) bool { return v == "omitempty" }) {
 				return errors.Errorf("the \"json\" tag of the Message field cannot contain \"omitempty\", to ensure that this field always appears")
 			}
 			return nil

@@ -22,8 +22,15 @@ func (o OrderSvc) CancelOrder(ctx context.Context, req *order.CancelOrderRequest
 	}, nil
 }
 
-func (o OrderSvc) GetOrderDetail(ctx context.Context, req *order.GetOrderDetailRequest) (*order.GetOrderDetailResponse, error) {
+func (o OrderSvc) OrderDetail(ctx context.Context, req *order.GetOrderDetailRequest) (*order.GetOrderDetailResponse, error) {
 	return &order.GetOrderDetailResponse{
+		Code:    -1,
+		Message: "not implemented",
+	}, nil
+}
+
+func (o OrderSvc) Update(ctx context.Context, req *order.UpdateOrderRequest) (*order.UpdateOrderResponse, error) {
+	return &order.UpdateOrderResponse{
 		Code:    -1,
 		Message: "not implemented",
 	}, nil

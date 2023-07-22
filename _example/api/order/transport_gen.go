@@ -8,11 +8,23 @@ import (
 	"encoding/json"
 	"fmt"
 	khttp "github.com/go-kit/kit/transport/http"
+	schema "github.com/gorilla/schema"
 	httprouter "github.com/julienschmidt/httprouter"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"net/http"
 	"net/url"
 )
+
+func beautifyErrorEncoder(ctx context.Context, err error, wr http.ResponseWriter) {
+	var resp struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}
+
+	resp.Code = -1
+	resp.Message = fmt.Sprintf("error occurred: %v", err)
+	json.NewEncoder(wr).Encode(resp)
+}
 
 func httpJSONRequestDecoder[T any](ctx context.Context, req *http.Request) (any, error) {
 	var request T
@@ -33,13 +45,34 @@ func httpJSONResponseDecoder[T any](ctx context.Context, resp *http.Response) (a
 	return &response, nil
 }
 
+func httpQueryStringEncoder(ctx context.Context, r *http.Request, request any) error {
+	var values url.Values
+	err := schema.NewEncoder().Encode(request, values)
+	if err != nil {
+		return err
+	}
+	r.URL.RawQuery = values.Encode()
+	return nil
+}
+
+func httpQueryStringRequestDecoder[T any](ctx context.Context, req *http.Request) (any, error) {
+	var request T
+	defer req.Body.Close()
+	err := schema.NewDecoder().Decode(&request, req.URL.Query())
+	if err != nil {
+		return nil, err
+	}
+	return &request, nil
+}
+
 //go:embed swagger.json
 var swagger embed.FS
 
 type HTTPClientSet struct {
-	CancelOrderClient    *khttp.Client
-	CreateOrderClient    *khttp.Client
-	GetOrderDetailClient *khttp.Client
+	CancelOrderClient *khttp.Client
+	CreateOrderClient *khttp.Client
+	OrderDetailClient *khttp.Client
+	UpdateClient      *khttp.Client
 }
 
 func NewHTTPClientSet(scheme, host string, port int, options ...khttp.ClientOption) HTTPClientSet {
@@ -48,7 +81,7 @@ func NewHTTPClientSet(scheme, host string, port int, options ...khttp.ClientOpti
 			http.MethodPost,
 			&url.URL{
 				Host:   fmt.Sprintf("%s:%d", host, port),
-				Path:   "/api/v2/order-service/cancel-order",
+				Path:   "/api/v1/order-service/order/cancel",
 				Scheme: scheme,
 			},
 			khttp.EncodeJSONRequest,
@@ -58,56 +91,75 @@ func NewHTTPClientSet(scheme, host string, port int, options ...khttp.ClientOpti
 			http.MethodPost,
 			&url.URL{
 				Host:   fmt.Sprintf("%s:%d", host, port),
-				Path:   "/api/v2/order-service/create-order",
+				Path:   "/api/v1/order-service/order",
 				Scheme: scheme,
 			},
 			khttp.EncodeJSONRequest,
 			httpJSONResponseDecoder[CreateOrderResponse],
 			options...),
-		GetOrderDetailClient: khttp.NewClient(
-			http.MethodPost,
+		OrderDetailClient: khttp.NewClient(
+			http.MethodGet,
 			&url.URL{
 				Host:   fmt.Sprintf("%s:%d", host, port),
-				Path:   "/api/v2/order-service/get-order-detail",
+				Path:   "/api/v1/order-service/order/detail",
+				Scheme: scheme,
+			},
+			httpQueryStringEncoder,
+			httpJSONResponseDecoder[GetOrderDetailResponse],
+			options...),
+		UpdateClient: khttp.NewClient(
+			http.MethodPut,
+			&url.URL{
+				Host:   fmt.Sprintf("%s:%d", host, port),
+				Path:   "/api/v1/order-service/order",
 				Scheme: scheme,
 			},
 			khttp.EncodeJSONRequest,
-			httpJSONResponseDecoder[GetOrderDetailResponse],
+			httpJSONResponseDecoder[UpdateOrderResponse],
 			options...),
 	}
 }
 
 func (s HTTPClientSet) EndpointSet() EndpointSet {
 	return EndpointSet{
-		CancelOrderEndpoint:    s.CancelOrderClient.Endpoint(),
-		CreateOrderEndpoint:    s.CreateOrderClient.Endpoint(),
-		GetOrderDetailEndpoint: s.GetOrderDetailClient.Endpoint(),
+		CancelOrderEndpoint: s.CancelOrderClient.Endpoint(),
+		CreateOrderEndpoint: s.CreateOrderClient.Endpoint(),
+		OrderDetailEndpoint: s.OrderDetailClient.Endpoint(),
+		UpdateEndpoint:      s.UpdateClient.Endpoint(),
 	}
 }
 
 type HTTPServerSet struct {
-	CancelOrderServer    *khttp.Server
-	CreateOrderServer    *khttp.Server
-	GetOrderDetailServer *khttp.Server
+	CancelOrderServer *khttp.Server
+	CreateOrderServer *khttp.Server
+	OrderDetailServer *khttp.Server
+	UpdateServer      *khttp.Server
 }
 
 func NewHTTPServerSet(endpointSet EndpointSet, options ...khttp.ServerOption) HTTPServerSet {
+	options = append(options, khttp.ServerBefore(khttp.PopulateRequestContext))
+	options = append(options, khttp.ServerErrorEncoder(beautifyErrorEncoder))
 	return HTTPServerSet{
 		CancelOrderServer: khttp.NewServer(
 			endpointSet.CancelOrderEndpoint,
 			httpJSONRequestDecoder[CancelOrderRequest],
 			khttp.EncodeJSONResponse,
-			append(options, khttp.ServerBefore(khttp.PopulateRequestContext))...),
+			options...),
 		CreateOrderServer: khttp.NewServer(
 			endpointSet.CreateOrderEndpoint,
 			httpJSONRequestDecoder[CreateOrderRequest],
 			khttp.EncodeJSONResponse,
-			append(options, khttp.ServerBefore(khttp.PopulateRequestContext))...),
-		GetOrderDetailServer: khttp.NewServer(
-			endpointSet.GetOrderDetailEndpoint,
-			httpJSONRequestDecoder[GetOrderDetailRequest],
+			options...),
+		OrderDetailServer: khttp.NewServer(
+			endpointSet.OrderDetailEndpoint,
+			httpQueryStringRequestDecoder[GetOrderDetailRequest],
 			khttp.EncodeJSONResponse,
-			append(options, khttp.ServerBefore(khttp.PopulateRequestContext))...),
+			options...),
+		UpdateServer: khttp.NewServer(
+			endpointSet.UpdateEndpoint,
+			httpJSONRequestDecoder[UpdateOrderRequest],
+			khttp.EncodeJSONResponse,
+			options...),
 	}
 }
 
@@ -123,15 +175,19 @@ func (s HTTPServerSet) Handler() http.Handler {
 		httpSwagger.Handler(httpSwagger.URL("/swagger/order-service/spec/swagger.json")))
 	m.Handler(
 		http.MethodPost,
-		"/api/v2/order-service/cancel-order",
+		"/api/v1/order-service/order/cancel",
 		s.CancelOrderServer)
 	m.Handler(
 		http.MethodPost,
-		"/api/v2/order-service/create-order",
+		"/api/v1/order-service/order",
 		s.CreateOrderServer)
 	m.Handler(
-		http.MethodPost,
-		"/api/v2/order-service/get-order-detail",
-		s.GetOrderDetailServer)
+		http.MethodGet,
+		"/api/v1/order-service/order/detail",
+		s.OrderDetailServer)
+	m.Handler(
+		http.MethodPut,
+		"/api/v1/order-service/order",
+		s.UpdateServer)
 	return m
 }

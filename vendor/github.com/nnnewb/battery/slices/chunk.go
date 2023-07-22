@@ -1,9 +1,9 @@
 package slices
 
 // Chunk returns a new slice containing slices of size n from the original slice.
-func (s Slice[T]) Chunk(n int) Slice[any] {
+func Chunk[T any](s []T, n int) [][]T {
 	// Initialize an empty slice of slices
-	var result Slice[any]
+	var result [][]T
 
 	// Iterate over the original slice in steps of size n
 	for i := 0; i < len(s); i += n {

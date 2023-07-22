@@ -1,7 +1,7 @@
 package slices
 
 // TakeWhile returns a new slice containing the longest prefix of the original slice for which the given function returns true.
-func (s Slice[T]) TakeWhile(predicate func(T) bool) Slice[T] {
+func TakeWhile[T any](s []T, predicate func(T) bool) []T {
 	// Initialize an empty slice to hold the prefix elements
 	prefix := make([]T, 0)
 

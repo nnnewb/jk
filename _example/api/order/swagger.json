@@ -12,12 +12,66 @@
   "swagger": "2.0",
   "info": {
     "title": "OrderService",
-    "version": "0.1.0"
+    "version": "v0.1.0"
   },
   "host": "localhost",
-  "basePath": "/api/v2/OrderService",
+  "basePath": "/api/v1/order-service/",
   "paths": {
-    "/cancel-order": {
+    "/api/v1/order-service/order": {
+      "put": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "OrderService"
+        ],
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "payload",
+            "in": "body",
+            "schema": {
+              "properties": {
+                "order_info": {
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "item_id": {
+                        "type": "string"
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "format": "int64"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "schema": {
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/order-service/order/cancel": {
       "post": {
         "consumes": [
           "application/json"
@@ -60,8 +114,8 @@
         }
       }
     },
-    "/create-order": {
-      "post": {
+    "/api/v1/order-service/order/detail": {
+      "get": {
         "consumes": [
           "application/json"
         ],
@@ -71,74 +125,13 @@
         "tags": [
           "OrderService"
         ],
-        "operationId": "create-order",
+        "operationId": "order-detail",
         "parameters": [
           {
-            "name": "payload",
-            "in": "body",
+            "name": "order_id",
+            "in": "query",
             "schema": {
-              "properties": {
-                "order_info": {
-                  "type": "array",
-                  "items": {
-                    "properties": {
-                      "item_id": {
-                        "type": "string"
-                      },
-                      "quantity": {
-                        "type": "integer",
-                        "format": "int64"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": "",
-            "schema": {
-              "properties": {
-                "code": {
-                  "type": "integer",
-                  "format": "int64"
-                },
-                "message": {
-                  "type": "string"
-                },
-                "order_id": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/get-order-detail": {
-      "post": {
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "OrderService"
-        ],
-        "operationId": "get-order-detail",
-        "parameters": [
-          {
-            "name": "payload",
-            "in": "body",
-            "schema": {
-              "properties": {
-                "order_id": {
-                  "type": "string"
-                }
-              }
+              "type": "string"
             }
           }
         ],
@@ -174,18 +167,5 @@
         }
       }
     }
-  },
-  "securityDefinitions": {
-    "api_key": {
-      "description": "simple api key",
-      "type": "apiKey",
-      "name": "X-Authentication",
-      "in": "header"
-    }
-  },
-  "tags": [
-    {
-      "name": "OrderService"
-    }
-  ]
+  }
 }
