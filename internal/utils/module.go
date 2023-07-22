@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/juju/errors"
+	"emperror.dev/errors"
 	"golang.org/x/mod/modfile"
 )
 
@@ -16,16 +16,16 @@ func ResolveFullPackagePath(origin, dirpath string) (string, error) {
 	if _, err := os.Stat(filename); err == nil {
 		content, err := os.ReadFile(filename)
 		if err != nil {
-			return "", errors.Trace(err)
+			return "", errors.WithStack(err)
 		}
 		file, err := modfile.Parse(filename, content, nil)
 		if err != nil {
-			return "", errors.Trace(err)
+			return "", errors.WithStack(err)
 		}
 
 		relativePath, err := filepath.Rel(dirpath, origin)
 		if err != nil {
-			return "", errors.Trace(err)
+			return "", errors.WithStack(err)
 		}
 
 		return path.Join(file.Module.Mod.Path, strings.ReplaceAll(relativePath, "\\", "/")), nil

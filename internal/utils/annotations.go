@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/go-multierror"
+	"emperror.dev/errors"
 )
 
 func parseCommentAnnotations(cg *ast.CommentGroup) map[string]string {
@@ -152,7 +152,7 @@ func unmarshalStruct(dest reflect.Value, value map[string]string) error {
 		case reflect.Slice, reflect.Struct, reflect.Map:
 			err := json.Unmarshal([]byte(val), dest.Field(i).Interface())
 			if err != nil {
-				ret = multierror.Append(ret, err)
+				ret = errors.Append(ret, err)
 			}
 		case reflect.Uint, reflect.Int,
 			reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
@@ -160,10 +160,10 @@ func unmarshalStruct(dest reflect.Value, value map[string]string) error {
 			reflect.String, reflect.Bool:
 			err := unmarshalPrimitive(fieldValue.Addr(), val)
 			if err != nil {
-				ret = multierror.Append(ret, err)
+				ret = errors.Append(ret, err)
 			}
 		default:
-			ret = multierror.Append(ret, fmt.Errorf("unsupported type: %v (%s)", field.Type, field.Name))
+			ret = errors.Append(ret, fmt.Errorf("unsupported type: %v (%s)", field.Type, field.Name))
 		}
 	}
 

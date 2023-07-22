@@ -6,14 +6,14 @@ import (
 	"reflect"
 	"strings"
 
+	"emperror.dev/errors"
 	"github.com/dave/jennifer/jen"
-	"github.com/juju/errors"
 	"github.com/nnnewb/battery/slices"
 )
 
 func InitializeFileCommon(f *jen.File) {
 	f.ImportAlias("github.com/swaggo/http-swagger/v2", "httpSwagger")
-	f.ImportName("github.com/juju/errors", "errors")
+	f.ImportName("emperror.dev/errors", "errors")
 	f.ImportName("github.com/go-kit/kit/endpoint", "endpoint")
 	f.ImportAlias("github.com/go-kit/kit/transport/http", "khttp")
 	f.ImportAlias("github.com/gorilla/schema", "schema")

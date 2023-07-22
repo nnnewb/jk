@@ -4,8 +4,8 @@ import (
 	"go/types"
 	"strings"
 
+	"emperror.dev/errors"
 	"github.com/dave/jennifer/jen"
-	"github.com/juju/errors"
 	"github.com/nnnewb/jk/internal/utils"
 )
 
@@ -152,11 +152,11 @@ func GenerateEndpoints(f *jen.File, svc *types.Named) error {
 		signature := method.Type().(*types.Signature)
 
 		if err := utils.CheckParams(signature.Params()); err != nil {
-			return errors.Annotatef(err, "check method signature: %s", method.FullName())
+			return errors.Wrapf(err, "check method signature: %s", method.FullName())
 		}
 
 		if err := utils.CheckResults(signature.Results()); err != nil {
-			return errors.Annotatef(err, "check method signature: %s", method.FullName())
+			return errors.Wrapf(err, "check method signature: %s", method.FullName())
 		}
 	}
 
