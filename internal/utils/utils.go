@@ -17,6 +17,7 @@ func InitializeFileCommon(f *jen.File) {
 	f.ImportName("github.com/go-kit/kit/endpoint", "endpoint")
 	f.ImportAlias("github.com/go-kit/kit/transport/http", "khttp")
 	f.ImportAlias("github.com/gorilla/schema", "schema")
+	f.ImportAlias("github.com/gin-gonic/gin", "gin")
 }
 
 // CheckParams checks if the function signature meets the following requirements:
