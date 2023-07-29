@@ -10,7 +10,12 @@ import (
 // @swagger-info-title 订单服务
 // @http-base-path /api/v1/order-service/
 //
-//go:generate jk generate all -t OrderService
+//go:generate jk generate endpoints -t OrderService
+//go:generate jk generate transport -t OrderService --protocol http --server --language go --framework gin --swagger
+//go:generate jk generate transport -t OrderService --protocol http --client --language go --framework http
+//go:generate jk generate transport -t OrderService --protocol http --client --language ts --framework fetch
+//go:generate prettier -w client.ts
+//go:generate tsc
 type OrderService interface {
 	// CreateOrder 创建订单
 	// @http-method post

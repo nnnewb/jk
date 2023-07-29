@@ -155,6 +155,7 @@ func generateGinServerSet(f *jen.File, service *domain.Service) {
 						case http.MethodGet, http.MethodDelete:
 							d[jen.Id(method.Func.Name()+"Handler")] = jen.
 								Id("Handler").
+								Types(method.RequestTypeCodeJen()).
 								Call(
 									jen.Id("eps").Dot(method.Func.Name()+"Endpoint"),
 									jen.Id("QueryStringDecoder"),
@@ -163,6 +164,7 @@ func generateGinServerSet(f *jen.File, service *domain.Service) {
 						case http.MethodPost, http.MethodPut, http.MethodPatch:
 							d[jen.Id(method.Func.Name()+"Handler")] = jen.
 								Id("Handler").
+								Types(method.RequestTypeCodeJen()).
 								Call(
 									jen.Id("eps").Dot(method.Func.Name()+"Endpoint"),
 									jen.Id("JSONBodyDecoder"),

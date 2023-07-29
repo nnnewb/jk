@@ -53,6 +53,4 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.PersistentFlags().StringP("typename", "t", "", "name of service interface")
-	rootCmd.PersistentFlags().StringP("package", "p", "", "package name of service interface")
 }

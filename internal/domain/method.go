@@ -29,6 +29,17 @@ func (m *Method) RequestType() types.Type {
 	return signature.Params().At(1).Type()
 }
 
+func (m *Method) RequestTypeName() string {
+	signature := m.Func.Type().(*types.Signature)
+	if signature.Params().Len() != 2 {
+		panic(errors.Errorf("unexpected function signature: params type mismatch, got %s", signature))
+	}
+
+	ptrType := signature.Params().At(1).Type().(*types.Pointer)
+	named := ptrType.Elem().(*types.Named)
+	return named.Obj().Name()
+}
+
 func (m *Method) ResponseType() types.Type {
 	signature := m.Func.Type().(*types.Signature)
 	if signature.Results().Len() != 2 {
@@ -36,6 +47,17 @@ func (m *Method) ResponseType() types.Type {
 	}
 
 	return signature.Results().At(0).Type()
+}
+
+func (m *Method) ResponseTypeName() string {
+	signature := m.Func.Type().(*types.Signature)
+	if signature.Params().Len() != 2 {
+		panic(errors.Errorf("unexpected function signature: params type mismatch, got %s", signature))
+	}
+
+	ptrType := signature.Results().At(0).Type().(*types.Pointer)
+	named := ptrType.Elem().(*types.Named)
+	return named.Obj().Name()
 }
 
 func (m *Method) RequestTypeCodeJen() *jen.Statement {
