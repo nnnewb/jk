@@ -8,10 +8,10 @@ import (
 //
 // @swagger-info-version v1
 // @swagger-info-title 订单服务
-// @http-base-path /api/v1/order-service/
+// @http-base-path /
 //
 //go:generate jk generate endpoints -t OrderService
-//go:generate jk generate transport -t OrderService --protocol http --server --language go --framework gin --swagger
+//go:generate jk generate transport -t OrderService --protocol http --server --language go --framework gin --swagger --embed-swagger
 //go:generate jk generate transport -t OrderService --protocol http --client --language go --framework http
 //go:generate jk generate transport -t OrderService --protocol http --client --language ts --framework fetch
 //go:generate prettier -w client.ts

@@ -1,9 +1,11 @@
 package gen
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/dave/jennifer/jen"
+	"github.com/iancoleman/strcase"
 	"github.com/nnnewb/jk/internal/domain"
 )
 
@@ -187,6 +189,45 @@ func generateGinServerSet(f *jen.File, service *domain.Service) {
 						jen.Id("s").Dot(method.Func.Name()+"Handler"),
 					)
 			}
+		}).Line()
+}
+
+func GenerateGinEmbedSwaggerUI(f *jen.File, service *domain.Service) {
+	// //go:embed swagger.json
+	f.Commentf("//go:embed swagger.json")
+	// var swagger embed.FS
+	f.Var().Id("swagger").Qual("embed", "FS")
+
+	f.Commentf("// RegisterEmbedSwaggerUI register embed swagger-ui urls")
+	// func RegisterEmbedSwaggerUI(r gin.IRouter) {
+	f.Func().Id("RegisterEmbedSwaggerUI").
+		Params(jen.Id("r").Qual("github.com/gin-gonic/gin", "IRouter")).
+		BlockFunc(func(g *jen.Group) {
+			// fs = http.FS(swagger)
+			g.Id("fs").Op(":=").Qual("net/http", "FS").Call(jen.Id("swagger"))
+			// handler = http.FileServer(fs)
+			g.Id("handler").Op(":=").Qual("net/http", "FileServer").Call(jen.Id("fs"))
+			// handler = http.StripPrefix("", handler)
+			prefix := fmt.Sprintf("/swagger/%s/spec/", strcase.ToKebab(service.Name()))
+			g.Id("handler").Op("=").Qual("net/http", "StripPrefix").Call(jen.Lit(prefix), jen.Id("handler"))
+			// r.GET("/swagger/SVC/spec/*rest", http.WrapH(handler))
+			url := fmt.Sprintf("/swagger/%s/spec/*rest", strcase.ToKebab(service.Name()))
+			g.Id("r").Dot("GET").Call(
+				jen.Line().Lit(url),
+				jen.Line().Qual("github.com/gin-gonic/gin", "WrapH").Call(jen.Id("handler")),
+			)
+
+			// u := httpSwagger.URL("/swagger/SVC/swagger.json")
+			url = fmt.Sprintf("/swagger/%s/spec/swagger.json", strcase.ToKebab(service.Name()))
+			g.Id("u").Op(":=").Qual("github.com/swaggo/http-swagger/v2", "URL").Call(jen.Lit(url))
+			// handler = httpSwagger.Handler(u)
+			g.Id("handler").Op("=").Qual("github.com/swaggo/http-swagger/v2", "Handler").Call(jen.Id("u"))
+			// r.GET("/swagger/SVC/swagger-ui/*", gin.WrapH(handler))
+			url = fmt.Sprintf("/swagger/%s/swagger-ui/*rest", strcase.ToKebab(service.Name()))
+			g.Id("r").Dot("GET").Call(
+				jen.Lit(url),
+				jen.Qual("github.com/gin-gonic/gin", "WrapH").Call(jen.Id("handler")),
+			)
 		}).Line()
 }
 

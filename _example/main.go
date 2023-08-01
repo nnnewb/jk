@@ -2,17 +2,14 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	klog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	ktransport "github.com/go-kit/kit/transport"
-	khttp "github.com/go-kit/kit/transport/http"
-	"github.com/nnnewb/otelkit"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 
@@ -85,31 +82,13 @@ func main() {
 	errorLogger = level.NewInjector(errorLogger, level.ErrorValue())
 
 	endpointSet := order.NewEndpointSet(&order1.OrderSvc{})
-	serverSet := order.NewHTTPServerSet(
-		endpointSet,
-		khttp.ServerErrorHandler(ktransport.NewLogErrorHandler(errorLogger)),
-		otelkit.OpenTelemetryTraceServer(),
-		otelkit.OpenTelemetryTraceServerResp(),
-		otelkit.OpenTelemetryTraceServerEnd())
-
-	clientSet := order.NewHTTPClientSet(
-		"https",
-		"127.0.0.1",
-		8888,
-		otelkit.OpenTelemetryTraceClient(),
-		otelkit.OpenTelemetryTraceClientResp(),
-		otelkit.OpenTelemetryTraceClientEnd(),
-		khttp.SetClient(&http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}))
-	go func() {
-		time.Sleep(5 * time.Second)
-		_, err := clientSet.EndpointSet().CreateOrder(context.Background(), &order.CreateOrderRequest{})
-		if err != nil {
-			log.Printf("create order failed, error %+v", err)
-		}
-	}()
+	serverSet := order.NewGinServerSet(endpointSet)
+	engine := gin.New()
+	serverSet.Register(engine)
+	order.RegisterEmbedSwaggerUI(engine)
 
 	log.Println("Server now listening at https://127.0.0.1:8888/")
-	err = http.ListenAndServeTLS("127.0.0.1:8888", "cert.pem", "key.pem", serverSet.Handler())
+	err = http.ListenAndServeTLS("127.0.0.1:8888", "cert.pem", "key.pem", engine)
 	if err != nil {
 		log.Fatalf("Serve failed, error %+v", err)
 	}

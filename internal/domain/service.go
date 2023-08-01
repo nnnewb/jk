@@ -24,6 +24,10 @@ type Service struct {
 	Methods []*Method // 预先解析好的 method 列表
 }
 
+func (s *Service) Name() string {
+	return s.Interface.Obj().Name()
+}
+
 func ParseInterfaceData(pkg *types.Package, astPkg *ast.Package, name string) (*Service, error) {
 	ret := &Service{}
 
