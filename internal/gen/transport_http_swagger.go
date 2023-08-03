@@ -11,11 +11,12 @@ import (
 	"github.com/go-openapi/spec"
 	"github.com/iancoleman/strcase"
 	"github.com/nnnewb/jk/internal/domain"
+	"github.com/nnnewb/jk/internal/gen/http/common"
 	"github.com/nnnewb/jk/internal/utils"
 )
 
 func GenerateSwagger(wr io.Writer, service *domain.Service) error {
-	httpPopulateDefaultAnnotations(service)
+	common.HTTPPopulateDefaultAnnotations(service)
 
 	paths, err := generatePaths(service)
 	if err != nil {

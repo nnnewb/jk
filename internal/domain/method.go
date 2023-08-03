@@ -3,6 +3,7 @@ package domain
 import (
 	"go/ast"
 	"go/types"
+	"net/http"
 
 	"emperror.dev/errors"
 	"github.com/dave/jennifer/jen"
@@ -18,6 +19,24 @@ type Method struct {
 	Func        *types.Func
 	Field       *ast.Field
 	Annotations *MethodAnnotations
+}
+
+func (m *Method) HTTPMethodJen() *jen.Statement {
+	// check http-method annotation
+	httpMethod := jen.Qual("net/http", "MethodPost")
+	switch m.Annotations.HTTPMethod {
+	case http.MethodGet:
+		httpMethod = jen.Qual("net/http", "MethodGet")
+	case http.MethodDelete:
+		httpMethod = jen.Qual("net/http", "MethodDelete")
+	case http.MethodPost:
+		httpMethod = jen.Qual("net/http", "MethodPost")
+	case http.MethodPatch:
+		httpMethod = jen.Qual("net/http", "MethodPatch")
+	case http.MethodPut:
+		httpMethod = jen.Qual("net/http", "MethodPut")
+	}
+	return httpMethod
 }
 
 func (m *Method) RequestType() types.Type {

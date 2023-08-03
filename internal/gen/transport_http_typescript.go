@@ -10,6 +10,7 @@ import (
 	"emperror.dev/errors"
 	"github.com/iancoleman/strcase"
 	"github.com/nnnewb/jk/internal/domain"
+	"github.com/nnnewb/jk/internal/gen/http/common"
 )
 
 func generateNamedInterfaceDeclaration(wr io.Writer, memo map[string]bool, named *types.Named) error {
@@ -285,7 +286,7 @@ func generateTypescriptSchema(wr io.Writer, typ types.Type, depth int) error {
 }
 
 func GenerateTypeScriptClient(wr io.Writer, service *domain.Service) error {
-	httpPopulateDefaultAnnotations(service)
+	common.HTTPPopulateDefaultAnnotations(service)
 	err := generateInterfaceDeclaration(wr, service)
 	if err != nil {
 		return err

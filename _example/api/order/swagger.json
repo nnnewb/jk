@@ -11,7 +11,7 @@
   ],
   "swagger": "2.0",
   "info": {
-    "title": "OrderService",
+    "title": "Service",
     "version": "v0.1.0"
   },
   "host": "localhost",
@@ -26,7 +26,7 @@
           "application/json"
         ],
         "tags": [
-          "OrderService"
+          "Service"
         ],
         "operationId": "update",
         "parameters": [
@@ -80,7 +80,7 @@
           "application/json"
         ],
         "tags": [
-          "OrderService"
+          "Service"
         ],
         "operationId": "cancel-order",
         "parameters": [
@@ -120,7 +120,7 @@
           "application/json"
         ],
         "tags": [
-          "OrderService"
+          "Service"
         ],
         "operationId": "order-detail",
         "parameters": [

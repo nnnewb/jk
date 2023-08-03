@@ -1,4 +1,4 @@
-package gen
+package gin
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"github.com/dave/jennifer/jen"
 	"github.com/iancoleman/strcase"
 	"github.com/nnnewb/jk/internal/domain"
+	"github.com/nnnewb/jk/internal/gen/http/common"
 )
 
 func generateCommonCode(f *jen.File) {
@@ -196,15 +197,17 @@ func GenerateGinEmbedSwaggerUI(f *jen.File, service *domain.Service) {
 	// //go:embed swagger.json
 	f.Commentf("//go:embed swagger.json")
 	// var swagger embed.FS
-	f.Var().Id("swagger").Qual("embed", "FS")
+	f.Var().Id("ginEmbedSwagger").Qual("embed", "FS")
 
 	f.Commentf("// RegisterEmbedSwaggerUI register embed swagger-ui urls")
 	// func RegisterEmbedSwaggerUI(r gin.IRouter) {
-	f.Func().Id("RegisterEmbedSwaggerUI").
+	f.Func().
+		Params(jen.Id("s").Op("*").Id("GinServerSet")).
+		Id("RegisterEmbedSwaggerUI").
 		Params(jen.Id("r").Qual("github.com/gin-gonic/gin", "IRouter")).
 		BlockFunc(func(g *jen.Group) {
 			// fs = http.FS(swagger)
-			g.Id("fs").Op(":=").Qual("net/http", "FS").Call(jen.Id("swagger"))
+			g.Id("fs").Op(":=").Qual("net/http", "FS").Call(jen.Id("ginEmbedSwagger"))
 			// handler = http.FileServer(fs)
 			g.Id("handler").Op(":=").Qual("net/http", "FileServer").Call(jen.Id("fs"))
 			// handler = http.StripPrefix("", handler)
@@ -232,7 +235,7 @@ func GenerateGinEmbedSwaggerUI(f *jen.File, service *domain.Service) {
 }
 
 func GenerateGin(f *jen.File, service *domain.Service) error {
-	httpPopulateDefaultAnnotations(service)
+	common.HTTPPopulateDefaultAnnotations(service)
 	generateCommonCode(f)
 	generateGinServerSet(f, service)
 	return nil

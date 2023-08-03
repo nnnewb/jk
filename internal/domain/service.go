@@ -7,6 +7,7 @@ import (
 	"go/types"
 
 	"github.com/nnnewb/jk/internal/utils"
+	"github.com/pkg/errors"
 )
 
 type ServiceAnnotations struct {
@@ -49,6 +50,10 @@ func ParseInterfaceData(pkg *types.Package, astPkg *ast.Package, name string) (*
 			return true
 		}
 	})
+
+	if ret.TypeSpec == nil {
+		return nil, errors.Errorf("Type %s not found", name)
+	}
 
 	if _, ok := ret.TypeSpec.Type.(*ast.InterfaceType); !ok {
 		return nil, fmt.Errorf("%s is not an interface type, got %T", name, ret.TypeSpec.Type)

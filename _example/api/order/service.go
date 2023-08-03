@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-// OrderService 订单服务定义
+// Service 订单服务定义
 //
 // @swagger-info-version v1
 // @swagger-info-title 订单服务
@@ -16,7 +16,7 @@ import (
 //go:generate jk generate transport -t OrderService --protocol http --client --language ts --framework fetch
 //go:generate prettier -w client.ts
 //go:generate tsc
-type OrderService interface {
+type Service interface {
 	// CreateOrder 创建订单
 	// @http-method post
 	// @http-path /api/v1/order-service/order

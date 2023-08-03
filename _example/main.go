@@ -85,7 +85,7 @@ func main() {
 	serverSet := order.NewGinServerSet(endpointSet)
 	engine := gin.New()
 	serverSet.Register(engine)
-	order.RegisterEmbedSwaggerUI(engine)
+	serverSet.RegisterEmbedSwaggerUI(engine)
 
 	log.Println("Server now listening at https://127.0.0.1:8888/")
 	err = http.ListenAndServeTLS("127.0.0.1:8888", "cert.pem", "key.pem", engine)

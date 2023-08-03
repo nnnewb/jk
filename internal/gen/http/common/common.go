@@ -1,4 +1,4 @@
-package gen
+package common
 
 import (
 	"fmt"
@@ -6,12 +6,11 @@ import (
 	"path"
 	"strings"
 
-	"github.com/dave/jennifer/jen"
 	"github.com/iancoleman/strcase"
 	"github.com/nnnewb/jk/internal/domain"
 )
 
-func httpPopulateDefaultAnnotations(service *domain.Service) {
+func HTTPPopulateDefaultAnnotations(service *domain.Service) {
 	if service.Annotations.SwaggerInfoAPIVersion == "" {
 		service.Annotations.SwaggerInfoAPIVersion = "v0.1.0"
 	}
@@ -40,25 +39,4 @@ func httpPopulateDefaultAnnotations(service *domain.Service) {
 			method.Annotations.HTTPPath = path.Join(service.Annotations.HTTPBasePath, strcase.ToKebab(method.Func.Name()))
 		}
 	}
-}
-
-func generateEmbedSwaggerJSON(f *jen.File) {
-	// //go:embed swagger.json
-	f.Commentf("//go:embed swagger.json")
-	// var swagger embed.FS
-	f.Var().Id("swagger").Qual("embed", "FS")
-}
-
-func GenerateHTTPTransportClient(f *jen.File, service *domain.Service) {
-	generateHTTPJSONResponseDecoder(f)
-	generateHTTPQueryStringEncoder(f)
-	generateClientSet(f, service)
-}
-
-func GenerateHTTPTransportServer(f *jen.File, svc *domain.Service) {
-	generateBeautifyErrorEncoder(f)
-	generateHTTPJSONRequestDecoder(f)
-	generateHTTPQueryStringRequestDecoder(f)
-	generateEmbedSwaggerJSON(f)
-	generateServerSet(f, svc)
 }
