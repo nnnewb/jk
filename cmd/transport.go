@@ -26,8 +26,9 @@ import (
 	"emperror.dev/errors"
 	"github.com/dave/jennifer/jen"
 	"github.com/nnnewb/jk/internal/domain"
-	"github.com/nnnewb/jk/internal/gen"
 	stdcli "github.com/nnnewb/jk/internal/gen/http/client/go/std"
+	"github.com/nnnewb/jk/internal/gen/http/client/typescript/fetch"
+	"github.com/nnnewb/jk/internal/gen/http/doc"
 	"github.com/nnnewb/jk/internal/gen/http/server/go/gin"
 	stdsvr "github.com/nnnewb/jk/internal/gen/http/server/go/std"
 	"github.com/nnnewb/jk/internal/utils"
@@ -198,7 +199,7 @@ func genSwagger(service *domain.Service, filename string) error {
 		}
 	}(file)
 
-	err = gen.GenerateSwagger(file, service)
+	err = doc.GenerateSwagger(file, service)
 	if err != nil {
 		return errors.Wrap(err, "generate swagger failed")
 	}
@@ -249,7 +250,7 @@ func genTypeScriptClient(service *domain.Service, filename string) error {
 		return errors.Wrap(err, "write typescript api client failed")
 	}
 
-	err = gen.GenerateTypeScriptClient(file, service)
+	err = fetch.GenerateTypeScriptClient(file, service)
 	if err != nil {
 		return errors.Wrap(err, "generate typescript api client failed")
 	}

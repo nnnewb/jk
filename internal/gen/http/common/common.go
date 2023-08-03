@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"reflect"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -39,4 +40,25 @@ func HTTPPopulateDefaultAnnotations(service *domain.Service) {
 			method.Annotations.HTTPPath = path.Join(service.Annotations.HTTPBasePath, strcase.ToKebab(method.Func.Name()))
 		}
 	}
+}
+
+func GetJsonName(tag string) (string, bool) {
+	jsonTag := reflect.StructTag(tag).Get("json")
+	if jsonTag == "-" {
+		return "", false
+	}
+
+	var jsonName string
+	for _, v := range strings.Split(jsonTag, ",") {
+		if v != "omitempty" && strings.TrimSpace(v) != "" {
+			jsonName = v
+			break
+		}
+	}
+
+	if jsonName == "" {
+		return "", false
+	}
+
+	return jsonName, true
 }

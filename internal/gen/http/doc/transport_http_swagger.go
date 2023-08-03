@@ -1,10 +1,9 @@
-package gen
+package doc
 
 import (
 	"fmt"
 	"go/types"
 	"io"
-	"reflect"
 	"strings"
 
 	"emperror.dev/errors"
@@ -132,7 +131,7 @@ func generateQueryParameters(fun *types.Func) []spec.Parameter {
 			jsonName string
 			ok       bool
 		)
-		if jsonName, ok = getJsonName(structType.Tag(i)); !ok {
+		if jsonName, ok = common.GetJsonName(structType.Tag(i)); !ok {
 			jsonName = f.Name()
 		} else if jsonName == "-" {
 			continue
@@ -219,7 +218,7 @@ func generateSchemaFromType(typ types.Type) *spec.Schema {
 				jsonName string
 				ok       bool
 			)
-			if jsonName, ok = getJsonName(t.Tag(i)); !ok {
+			if jsonName, ok = common.GetJsonName(t.Tag(i)); !ok {
 				jsonName = field.Name()
 			} else if jsonName == "-" {
 				continue
@@ -234,25 +233,4 @@ func generateSchemaFromType(typ types.Type) *spec.Schema {
 	default:
 		panic(errors.Errorf("unserializable type %v", typ))
 	}
-}
-
-func getJsonName(tag string) (string, bool) {
-	jsonTag := reflect.StructTag(tag).Get("json")
-	if jsonTag == "-" {
-		return "", false
-	}
-
-	var jsonName string
-	for _, v := range strings.Split(jsonTag, ",") {
-		if v != "omitempty" && strings.TrimSpace(v) != "" {
-			jsonName = v
-			break
-		}
-	}
-
-	if jsonName == "" {
-		return "", false
-	}
-
-	return jsonName, true
 }

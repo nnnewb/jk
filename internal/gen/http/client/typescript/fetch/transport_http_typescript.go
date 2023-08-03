@@ -1,4 +1,4 @@
-package gen
+package fetch
 
 import (
 	"fmt"
@@ -255,7 +255,7 @@ func generateTypescriptSchema(wr io.Writer, typ types.Type, depth int) error {
 				jsonName string
 				ok       bool
 			)
-			if jsonName, ok = getJsonName(t.Tag(i)); !ok {
+			if jsonName, ok = common.GetJsonName(t.Tag(i)); !ok {
 				jsonName = field.Name()
 			} else if jsonName == "-" {
 				continue
