@@ -7,14 +7,19 @@ import (
 	"os"
 	"time"
 
+	"example/api/order"
+	order1 "example/internal/order"
+
 	"github.com/gin-gonic/gin"
 	klog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	okmgin "github.com/nnnewb/otelkit/metric/gin"
+	oktgin "github.com/nnnewb/otelkit/tracing/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-
-	"example/api/order"
-	order1 "example/internal/order"
 
 	_ "github.com/uber/jaeger-client-go"
 	"go.opentelemetry.io/otel"
@@ -64,6 +69,24 @@ func main() {
 		}
 	}(ctx)
 
+	promExporter, err := prometheus.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	provider := metric.NewMeterProvider(metric.WithReader(promExporter))
+	meter := provider.Meter("http-example")
+
+	// serving /metrics endpoint
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Println("prometheus scrap endpoint start serving at https://127.0.0.1:23333/metrics")
+		err := http.ListenAndServeTLS("127.0.0.1:23333", "secrets/cert.pem", "secrets/key.pem", http.DefaultServeMux)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
 	// HOWTO: generate self-signed certificate with openssl cli
 	//
 	// openssl req \
@@ -84,11 +107,13 @@ func main() {
 	endpointSet := order.NewEndpointSet(&order1.OrderSvc{})
 	serverSet := order.NewGinServerSet(endpointSet)
 	engine := gin.New()
+	engine.Use(oktgin.TraceMiddleware(tp.Tracer("oktgin"), otel.GetTextMapPropagator()))
+	engine.Use(okmgin.MeasureHandleFunc(meter))
 	serverSet.Register(engine)
 	serverSet.RegisterEmbedSwaggerUI(engine)
 
 	log.Println("Server now listening at https://127.0.0.1:8888/")
-	err = http.ListenAndServeTLS("127.0.0.1:8888", "cert.pem", "key.pem", engine)
+	err = http.ListenAndServeTLS("127.0.0.1:8888", "secrets/cert.pem", "secrets/key.pem", engine)
 	if err != nil {
 		log.Fatalf("Serve failed, error %+v", err)
 	}

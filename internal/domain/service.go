@@ -6,8 +6,8 @@ import (
 	"go/token"
 	"go/types"
 
+	"emperror.dev/errors"
 	"github.com/nnnewb/jk/internal/utils"
-	"github.com/pkg/errors"
 )
 
 type ServiceAnnotations struct {
